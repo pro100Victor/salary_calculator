@@ -5,6 +5,9 @@ from salary_calculator.employee_service import EmployeeService
 from salary_calculator.payroll_service import PayrollService
 
 
+# TODO: Логику данной функции можно вынести 
+# в конструктор класса SalaryCalculatorCLI
+# В Python конструктор класса - это функция def __init__(self) 
 def create_application() -> SalaryCalculatorCLI:
     """Создаёт сервисы и связывает их с консольным интерфейсом."""
 

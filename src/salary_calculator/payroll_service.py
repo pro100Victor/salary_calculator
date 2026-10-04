@@ -11,6 +11,7 @@ from salary_calculator.calculators import (
 from salary_calculator.models import Employee, PayrollResult
 
 
+# TODO: Поместить в папку services
 class PayrollService:
     """Проверяет табельные данные и формирует результат расчёта."""
 

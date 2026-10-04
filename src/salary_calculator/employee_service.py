@@ -5,6 +5,7 @@ import math
 from salary_calculator.models import Employee
 
 
+# TODO: Поместить в папку services
 class EmployeeService:
     """Добавляет, хранит и возвращает сотрудников во время работы программы."""
 

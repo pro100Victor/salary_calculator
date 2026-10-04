@@ -1,8 +1,10 @@
 """Контракты взаимодействия CLI с расчётной частью программы."""
 
-from typing import Protocol, Sequence
+from collections.abc import Sequence
+from typing import Protocol
 
 
+# TODO: Здесь и далее реализовать через dataclasses
 class EmployeeView(Protocol):
     """Описывает данные сотрудника, необходимые интерфейсу."""
 
@@ -23,6 +25,7 @@ class PayrollResultView(Protocol):
     amount_to_pay: float
 
 
+# TODO: Здесь и далее реализовать через abc.ABC
 class EmployeeServiceProtocol(Protocol):
     """Определяет методы сервиса сотрудников для работы CLI."""
 

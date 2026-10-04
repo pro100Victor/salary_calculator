@@ -3,10 +3,13 @@
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Protocol
 
-
 MONEY_PRECISION = Decimal("0.01")
 
-
+# TODO: для реализации паттерна "Стратегия"
+# лучше использовать абстрактные классы. 
+# Протоколы лучше использовать, 
+# когда у класса известна структура и ее нельзя менять.
+# Вы код менять можете. 
 class SalaryCalculationStrategy(Protocol):
     """Определяет общий контракт для способов начисления зарплаты."""
 

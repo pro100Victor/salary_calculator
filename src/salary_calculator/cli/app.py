@@ -35,6 +35,16 @@ class SalaryCalculatorCLI:
     def run(self) -> None:
         """Запускает главное меню и обрабатывает команды пользователя."""
 
+        # TODO: Хардкод чисел заменить на переменные, 
+        # либо IntEnum, чтобы переиспользовать 
+        # через f-строки в методе _show_menu
+        """
+        Пример:
+        class AppCommands(IntEnum):
+            AddEmployeeCommand = 1
+            ShowEmployeesCommand = 2
+            ...
+        """
         actions = {
             1: self._add_employee,
             2: self._show_employees,
@@ -49,6 +59,9 @@ class SalaryCalculatorCLI:
             self._show_menu()
 
             try:
+                # TODO: Тут читаются не просто целые числа,
+                # а числа, которые соответствуют 
+                # вашим командам программе (через IntEnum)
                 choice = self._input_reader.read_int(
                     "выберите действие: ",
                     minimum=0,

@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from salary_calculator.cli.contracts import EmployeeView, PayrollResultView
 
+# TODO: бесхозные функции поместить в класс
 
 def format_employee(employee: EmployeeView) -> str:
     """Формирует текст с данными одного сотрудника."""
