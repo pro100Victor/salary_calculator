@@ -1,97 +1,124 @@
-"""Сервис управления сотрудниками в оперативной памяти."""
+"""Кадровые операции с проверкой данных и расчётом ставки."""
 
-import math
+from dataclasses import replace
+from datetime import date
 
-from salary_calculator.models import Employee
+from salary_calculator.contracts import EmployeeRepository
+from salary_calculator.models import Employee, Period
+from salary_calculator.organization_service import OrganizationService
 
 
 class EmployeeService:
-    """Добавляет, хранит и возвращает сотрудников во время работы программы."""
+    """Управляет карточками сотрудников через абстрактное хранилище."""
 
-    def __init__(self) -> None:
-        """Создаёт пустое InMemory-хранилище сотрудников."""
+    def __init__(
+        self, repository: EmployeeRepository, organization: OrganizationService
+    ) -> None:
+        """Получает InMemory-хранилище и тарифы организации."""
 
-        self._employees: list[Employee] = []
-        self._next_employee_id = 1
+        self._repository = repository
+        self._organization = organization
 
     def add_employee(
         self,
         full_name: str,
         inn: str,
         position: str,
-        rate_per_shift: float,
+        hire_date: date,
+        experience_years: int,
     ) -> Employee:
-        """Проверяет данные и добавляет нового сотрудника."""
+        """Проверяет данные, назначает ID и создаёт кадровую карточку."""
 
-        prepared_name = full_name.strip()
-        prepared_inn = inn.strip()
-        prepared_position = position.strip()
-
-        self._validate_name(prepared_name)
-        self._validate_inn(prepared_inn)
-        self._validate_position(prepared_position)
-        self._validate_rate(rate_per_shift)
-        self._check_inn_is_unique(prepared_inn)
-
+        name, inn = full_name.strip(), inn.strip()
+        self._validate(name, inn, hire_date)
+        self._check_inn_unique(inn)
+        rate = self._organization.rate_for(position, experience_years)
+        employees = self._repository.list_all()
+        next_id = max((item.employee_id for item in employees), default=0) + 1
         employee = Employee(
-            employee_id=self._next_employee_id,
-            full_name=prepared_name,
-            inn=prepared_inn,
-            position=prepared_position,
-            rate_per_shift=float(rate_per_shift),
+            next_id,
+            name,
+            inn,
+            self._organization.get_position(position).name,
+            hire_date,
+            experience_years,
+            rate,
         )
-
-        self._employees.append(employee)
-        self._next_employee_id += 1
+        self._repository.save(employee)
         return employee
 
-    def get_all_employees(self) -> list[Employee]:
-        """Возвращает копию списка всех сотрудников."""
+    def update_employee(
+        self,
+        employee_id: int,
+        full_name: str,
+        inn: str,
+        position: str,
+        hire_date: date,
+        experience_years: int,
+    ) -> Employee:
+        """Изменяет карточку сотрудника и пересчитывает его ставку."""
 
-        return self._employees.copy()
+        old = self._repository.get(employee_id)
+        name, inn = full_name.strip(), inn.strip()
+        self._validate(name, inn, hire_date)
+        self._check_inn_unique(inn, except_id=employee_id)
+        rate = self._organization.rate_for(position, experience_years)
+        if old.dismissal_date is not None and hire_date > old.dismissal_date:
+            raise ValueError("дата приёма не может быть позже даты увольнения")
+        updated = replace(
+            old,
+            full_name=name,
+            inn=inn,
+            position=self._organization.get_position(position).name,
+            hire_date=hire_date,
+            experience_years=experience_years,
+            rate_per_shift=rate,
+        )
+        self._repository.save(updated)
+        return updated
+
+    def dismiss_employee(self, employee_id: int, dismissal_date: date) -> Employee:
+        """Устанавливает дату увольнения без удаления истории сотрудника."""
+
+        employee = self._repository.get(employee_id)
+        if not isinstance(dismissal_date, date):
+            raise ValueError("введите корректную дату увольнения")
+        if dismissal_date < employee.hire_date:
+            raise ValueError("увольнение не может быть раньше приёма на работу")
+        if employee.dismissal_date is not None:
+            raise ValueError("сотрудник уже уволен")
+        updated = replace(employee, dismissal_date=dismissal_date)
+        self._repository.save(updated)
+        return updated
 
     def get_employee_by_id(self, employee_id: int) -> Employee:
-        """Возвращает сотрудника с указанным идентификатором."""
+        """Возвращает сотрудника по идентификатору."""
 
-        for employee in self._employees:
-            if employee.employee_id == employee_id:
-                return employee
+        return self._repository.get(employee_id)
 
-        raise LookupError(f"сотрудник с ID {employee_id} не найден")
+    def get_all_employees(self) -> list[Employee]:
+        """Возвращает все кадровые карточки, включая уволенных."""
 
-    def _validate_name(self, full_name: str) -> None:
-        """Проверяет, что ФИО сотрудника заполнено."""
+        return self._repository.list_all()
 
-        if not full_name:
-            raise ValueError("ФИО сотрудника не должно быть пустым")
+    def employed_in(self, period: Period) -> list[Employee]:
+        """Отбирает сотрудников, работавших в расчётном месяце."""
 
-    def _validate_inn(self, inn: str) -> None:
-        """Проверяет российский ИНН физического лица."""
+        return [item for item in self.get_all_employees() if item.employed_in(period)]
 
-        if len(inn) != 12 or not inn.isdigit():
-            raise ValueError("ИНН сотрудника должен состоять из 12 цифр")
+    def _validate(self, name: str, inn: str, hire_date: date) -> None:
+        """Проверяет обязательные кадровые сведения."""
 
-    def _validate_position(self, position: str) -> None:
-        """Проверяет, что должность сотрудника заполнена."""
+        if not name:
+            raise ValueError("ФИО не должно быть пустым")
+        if len(inn) != 12 or not inn.isascii() or not inn.isdigit():
+            raise ValueError("ИНН сотрудника должен содержать 12 цифр")
+        if not isinstance(hire_date, date):
+            raise ValueError("введите корректную дату приёма")
 
-        if not position:
-            raise ValueError("должность сотрудника не должна быть пустой")
+    def _check_inn_unique(self, inn: str, except_id: int | None = None) -> None:
+        """Отклоняет дубликат ИНН среди кадровых карточек."""
 
-    def _validate_rate(self, rate_per_shift: float) -> None:
-        """Проверяет корректность ставки за одну смену."""
-
-        if isinstance(rate_per_shift, bool) or not isinstance(
-            rate_per_shift,
-            (int, float),
-        ):
-            raise ValueError("ставка за смену должна быть числом")
-
-        if not math.isfinite(rate_per_shift) or rate_per_shift <= 0:
-            raise ValueError("ставка за смену должна быть больше нуля")
-
-    def _check_inn_is_unique(self, inn: str) -> None:
-        """Проверяет отсутствие сотрудника с таким же ИНН."""
-
-        for employee in self._employees:
-            if employee.inn == inn:
+        for item in self.get_all_employees():
+            if item.inn == inn and item.employee_id != except_id:
                 raise ValueError("сотрудник с таким ИНН уже существует")

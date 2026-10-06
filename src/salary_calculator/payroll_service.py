@@ -1,79 +1,101 @@
-"""Сервис расчёта заработной платы."""
+"""Атомарное формирование расчётной ведомости по заполненному табелю."""
 
-from decimal import ROUND_HALF_UP
-
-from salary_calculator.calculators import (
-    MONEY_PRECISION,
-    SalaryCalculationStrategy,
-    ShiftSalaryCalculator,
-    TaxCalculator,
-)
-from salary_calculator.models import Employee, PayrollResult
+from salary_calculator.calculators import ShiftSalaryCalculator, TaxCalculator
+from salary_calculator.contracts import SalaryCalculationStrategy, StatementRepository
+from salary_calculator.employee_service import EmployeeService
+from salary_calculator.models import PayrollResult, PayrollStatement, Period
+from salary_calculator.organization_service import OrganizationService
+from salary_calculator.timesheet_service import TimesheetService
 
 
 class PayrollService:
-    """Проверяет табельные данные и формирует результат расчёта."""
+    """Вычисляет зарплату каждого сотрудника и сохраняет ведомость целиком."""
 
     def __init__(
         self,
-        salary_calculator: SalaryCalculationStrategy | None = None,
-        tax_calculator: TaxCalculator | None = None,
+        statements: StatementRepository,
+        timesheets: TimesheetService,
+        employees: EmployeeService,
+        organization: OrganizationService,
+        strategy: SalaryCalculationStrategy | None = None,
     ) -> None:
-        """Подключает расчёт по сменам и фиксированный расчёт НДФЛ."""
+        """Получает хранилища и абстрактную стратегию начисления."""
 
-        self._salary_calculator = salary_calculator or ShiftSalaryCalculator()
-        self._tax_calculator = tax_calculator or TaxCalculator()
+        self._statements = statements
+        self._timesheets = timesheets
+        self._employees = employees
+        self._organization = organization
+        self._strategy = strategy or ShiftSalaryCalculator()
+        self._tax_calculator = TaxCalculator()
 
-    def calculate(
-        self,
-        employee: Employee,
-        worked_shifts: int,
-        shift_norm: int,
-    ) -> PayrollResult:
-        """Рассчитывает начисление, НДФЛ и сумму к выплате."""
+    def calculate_period(
+        self, period: Period, replace_existing: bool = False
+    ) -> PayrollStatement:
+        """Считает готовый табель и заменяет прежний результат только при успехе."""
 
-        self._validate_shift_norm(shift_norm)
-        self._validate_worked_shifts(worked_shifts, shift_norm)
+        timesheet = self._timesheets.get(period)
+        if timesheet.closed:
+            raise ValueError("закрытый период пересчитывать нельзя")
+        if self._statements.contains(period) and not replace_existing:
+            raise ValueError("ведомость уже существует; подтвердите перерасчёт")
 
-        accrued = self._salary_calculator.calculate(
-            rate_per_shift=employee.rate_per_shift,
-            worked_shifts=worked_shifts,
+        missing = set(timesheet.employee_ids) - set(timesheet.entries)
+        if missing:
+            raise ValueError(
+                f"не заполнены строки сотрудников: {', '.join(map(str, sorted(missing)))}"
+            )
+
+        organization = self._organization.get_organization()
+        results: list[PayrollResult] = []
+        for employee_id in timesheet.employee_ids:
+            employee = self._employees.get_employee_by_id(employee_id)
+            entry = timesheet.entries[employee_id]
+            accrued = self._strategy.calculate(
+                employee.rate_per_shift, entry.worked_shifts
+            )
+            tax = self._tax_calculator.calculate(accrued)
+            results.append(
+                PayrollResult(
+                    employee,
+                    entry.worked_shifts,
+                    entry.sick_days,
+                    entry.vacation_days,
+                    accrued,
+                    tax,
+                    accrued - tax,
+                )
+            )
+
+        statement = PayrollStatement(
+            period, organization.name, tuple(results), timesheet.revision
         )
-        tax = self._tax_calculator.calculate(accrued)
-        amount_to_pay = (accrued - tax).quantize(
-            MONEY_PRECISION,
-            rounding=ROUND_HALF_UP,
-        )
+        self._statements.save(statement)
+        return statement
 
-        return PayrollResult(
-            employee=employee,
-            worked_shifts=worked_shifts,
-            accrued=float(accrued),
-            tax=float(tax),
-            amount_to_pay=float(amount_to_pay),
-        )
+    def get_statement(self, period: Period) -> PayrollStatement:
+        """Возвращает последнюю подтверждённую ведомость."""
 
-    def _validate_shift_norm(self, shift_norm: int) -> None:
-        """Проверяет календарную норму смен за месяц."""
+        return self._statements.get(period)
 
-        if isinstance(shift_norm, bool) or not isinstance(shift_norm, int):
-            raise ValueError("норма смен должна быть целым числом")
+    def is_current(self, period: Period) -> bool:
+        """Проверяет соответствие ведомости текущей версии табеля."""
 
-        if shift_norm <= 0:
-            raise ValueError("норма смен должна быть больше нуля")
+        statement = self.get_statement(period)
+        return statement.source_revision == self._timesheets.get(period).revision
 
-    def _validate_worked_shifts(
-        self,
-        worked_shifts: int,
-        shift_norm: int,
-    ) -> None:
-        """Проверяет фактически отработанное количество смен."""
+    def get_payslip(self, period: Period, employee_id: int) -> PayrollResult:
+        """Возвращает персональный результат из ведомости за период."""
 
-        if isinstance(worked_shifts, bool) or not isinstance(worked_shifts, int):
-            raise ValueError("количество смен должно быть целым числом")
+        statement = self.get_statement(period)
+        for result in statement.results:
+            if result.employee.employee_id == employee_id:
+                return result
+        raise LookupError(f"расчётного листка сотрудника {employee_id} нет")
 
-        if worked_shifts < 0:
-            raise ValueError("количество смен не может быть отрицательным")
+    def close_period(self, period: Period) -> None:
+        """Закрывает период при наличии актуальной ведомости."""
 
-        if worked_shifts > shift_norm:
-            raise ValueError("количество смен не может превышать норму")
+        self.get_statement(period)
+        if not self.is_current(period):
+            raise ValueError("после изменения табеля пересчитайте ведомость")
+        self._timesheets.close(period)
