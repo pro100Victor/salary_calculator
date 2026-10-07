@@ -500,6 +500,7 @@ FastAPI, SQLAlchemy, Alembic и Pydantic записаны через `uv add` в
 
 - Инженер 1 — предметные модели, тарифы должностей и стажа, проверка карточек сотрудников, стратегия расчёта, фиксированный НДФЛ, формирование ведомостей (`models.py`, employee_service.py, organization_service.py, calculators.py, `payroll_service.py`).
 - Инженер 2 — CLI, ввод данных и отображение сотрудников, табеля, ведомости и листка (`cli/`). В интерфейсе нет формул расчёта зарплаты.
+-Инженер 3 — abc.ABC`-контракты, InMemory-хранилища, календарь и табель, авторизация, точка входа, структура проекта, тестирование и настройки инструментов (`contracts.py, repositories.py, calendar_service.py, timesheet_service.py, auth_service.py, main.py, tests/, `docs/`).
 
 ### Структура и распределение ответственности
 
