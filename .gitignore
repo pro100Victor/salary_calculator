@@ -1,0 +1,47 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+# Virtual environments
+.venv/
+.uv-cache/
+venv/
+env/
+ENV/
+# Test, type-checker, formatter and coverage caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+# Build artifacts and package metadata
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Logs and local databases for future labs
+*.log
+*.sqlite
+*.sqlite3
+*.db
+# IDE, editor and operating system
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
