@@ -1,6 +1,8 @@
 """Пользовательские сценарии CLI для всех функций учебного прототипа."""
 
 from collections.abc import Callable
+from datetime import date
+from decimal import Decimal
 
 from salary_calculator.auth_service import AuthService
 from salary_calculator.calendar_service import CalendarService
@@ -82,6 +84,11 @@ class SalaryCalculatorCLI:
         finally:
             self._auth.logout()
 
+    def _existing_period(self, lookup: Callable[[Period], object]) -> Period:
+        """Повторяет выбор периода, пока нужные данные не будут найдены."""
+
+        return self._reader.read_checked(self._period, lookup)
+
     def _login(self) -> bool:
         """Предоставляет три попытки входа в учебную систему."""
 
@@ -121,41 +128,173 @@ class SalaryCalculatorCLI:
         month = self._reader.read_int("месяц (1–12): ", 1, 12)
         return Period(year, month)
 
+    def _read_inn(self, employee_id: int | None = None) -> str:
+        """Запрашивает уникальный ИНН сотрудника с повтором ошибочного ввода."""
+
+        def validate(value: str) -> None:
+            """Проверяет формат ИНН и отсутствие другой карточки с ним."""
+
+            if len(value) != 12 or not value.isascii() or not value.isdigit():
+                raise ValueError("ИНН сотрудника должен содержать 12 цифр")
+            for employee in self._employees.get_all_employees():
+                if employee.inn == value and employee.employee_id != employee_id:
+                    raise ValueError("сотрудник с таким ИНН уже существует")
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_non_empty("ИНН сотрудника (12 цифр): "),
+            validate,
+        )
+
+    def _read_organization_inn(self) -> str:
+        """Запрашивает ИНН предприятия допустимой длины."""
+
+        def validate(value: str) -> None:
+            """Проверяет цифровой формат ИНН предприятия."""
+
+            if len(value) not in (10, 12) or not value.isascii() or not value.isdigit():
+                raise ValueError("ИНН организации должен содержать 10 или 12 цифр")
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_non_empty("ИНН организации: "),
+            validate,
+        )
+
+    def _read_kpp(self, inn: str) -> str:
+        """Запрашивает КПП с учётом введённого ИНН организации."""
+
+        def validate(value: str) -> None:
+            """Проверяет формат КПП и отсутствие КПП у ИП."""
+
+            if len(inn) == 12 and value:
+                raise ValueError("для ИП с 12-значным ИНН оставьте КПП пустым")
+            if value and (
+                len(value) != 9 or not value.isascii() or not value.isdigit()
+            ):
+                raise ValueError("КПП должен содержать 9 цифр или быть пустым")
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_optional("КПП (для ИП оставьте пустым): "),
+            validate,
+        )
+
+    def _read_position(self) -> str:
+        """Запрашивает существующую должность предприятия."""
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_non_empty("должность: "),
+            self._organization.get_position,
+        )
+
+    def _read_employee_id(self, allowed_ids: tuple[int, ...] | None = None) -> int:
+        """Запрашивает существующего сотрудника, при необходимости из табеля."""
+
+        def validate(value: int) -> None:
+            """Проверяет существование сотрудника и доступность в табеле."""
+
+            self._employees.get_employee_by_id(value)
+            if allowed_ids is not None and value not in allowed_ids:
+                raise ValueError("сотрудника нет в табеле выбранного периода")
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_int("ID сотрудника: ", 1),
+            validate,
+        )
+
+    def _read_hire_date(self, dismissal_date: date | None = None) -> date:
+        """Запрашивает дату приёма с учётом существующего увольнения."""
+
+        def validate(value: date) -> None:
+            """Не допускает приём позже записанного увольнения."""
+
+            if dismissal_date is not None and value > dismissal_date:
+                raise ValueError("дата приёма не может быть позже даты увольнения")
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_date("дата приёма (ДД.ММ.ГГГГ): "),
+            validate,
+        )
+
+    def _read_rate(self) -> Decimal:
+        """Запрашивает допустимую положительную ставку за смену."""
+
+        def validate(value: Decimal) -> None:
+            """Проверяет предел ставки и точность до копеек."""
+
+            if value > Decimal("1000000000"):
+                raise ValueError("ставка за смену слишком велика")
+            if value <= 0 or value != value.quantize(Decimal("0.01")):
+                raise ValueError("ставка должна быть положительной, до копеек")
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_decimal("базовая ставка за смену: "),
+            validate,
+        )
+
+    def _read_seniority_percent(self) -> Decimal:
+        """Запрашивает надбавку за год стажа в допустимом диапазоне."""
+
+        def validate(value: Decimal) -> None:
+            """Ограничивает надбавку диапазоном от нуля до ста процентов."""
+
+            if value > 100:
+                raise ValueError("надбавка должна быть от 0 до 100%")
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_decimal("надбавка за год стажа (%): "),
+            validate,
+        )
+
     def _configure_organization(self) -> None:
-        """Вводит реквизиты малого предприятия."""
+        """Последовательно запрашивает и сохраняет реквизиты предприятия."""
+
+        name = self._reader.read_non_empty("название организации: ")
+        inn = self._read_organization_inn()
+        kpp = self._read_kpp(inn)
+        address = self._reader.read_non_empty("адрес: ")
 
         organization = self._organization.set_organization(
-            name=self._reader.read_non_empty("название организации: "),
-            inn=self._reader.read_non_empty("ИНН организации: "),
-            kpp=self._reader.read_optional("КПП (для ИП оставьте пустым): "),
-            address=self._reader.read_non_empty("адрес: "),
+            name=name,
+            inn=inn,
+            kpp=kpp,
+            address=address,
         )
         self._output(f"настройки организации «{organization.name}» сохранены")
 
     def _configure_position(self) -> None:
-        """Вводит тариф и ежегодную надбавку для одной должности."""
+        """Запрашивает должность и проверяет каждый параметр тарифа."""
 
         self._organization.get_organization()
+        name = self._reader.read_non_empty("должность: ")
+        base_rate = self._read_rate()
+        seniority_percent = self._read_seniority_percent()
+
         position = self._organization.set_position(
-            name=self._reader.read_non_empty("должность: "),
-            base_rate=self._reader.read_decimal("базовая ставка за смену: "),
-            seniority_percent=self._reader.read_decimal("надбавка за год стажа (%): "),
+            name=name,
+            base_rate=base_rate,
+            seniority_percent=seniority_percent,
         )
         self._output(
             f"должность «{position.name}»: {position.base_rate:.2f} руб. за смену"
         )
 
     def _add_employee(self) -> None:
-        """Собирает кадровые сведения и сообщает о созданной записи."""
+        """Запрашивает поля сотрудника с сохранением уже проверенных значений."""
 
         self._organization.get_organization()
         self._show_positions()
+
+        full_name = self._reader.read_non_empty("ФИО: ")
+        inn = self._read_inn()
+        position = self._read_position()
+        hire_date = self._read_hire_date()
+        experience_years = self._reader.read_int("стаж в полных годах: ", 0, 80)
+
         employee = self._employees.add_employee(
-            full_name=self._reader.read_non_empty("ФИО: "),
-            inn=self._reader.read_non_empty("ИНН (12 цифр): "),
-            position=self._reader.read_non_empty("должность: "),
-            hire_date=self._reader.read_date("дата приёма (ДД.ММ.ГГГГ): "),
-            experience_years=self._reader.read_int("стаж в полных годах: ", 0, 80),
+            full_name=full_name,
+            inn=inn,
+            position=position,
+            hire_date=hire_date,
+            experience_years=experience_years,
         )
         self._output(
             f"сотрудник добавлен, ID: {employee.employee_id}; "
@@ -175,27 +314,55 @@ class SalaryCalculatorCLI:
             )
 
     def _edit_employee(self) -> None:
-        """Изменяет кадровую карточку через сервис сотрудников."""
+        """Проверяет каждое новое значение перед обновлением карточки."""
 
-        employee_id = self._reader.read_int("ID сотрудника: ", 1)
+        employee_id = self._read_employee_id()
         current = self._employees.get_employee_by_id(employee_id)
         self._output(format_employees([current]))
         self._show_positions()
+
+        full_name = self._reader.read_non_empty("новое ФИО: ")
+        inn = self._read_inn(employee_id)
+        position = self._read_position()
+        hire_date = self._read_hire_date(current.dismissal_date)
+        experience_years = self._reader.read_int("стаж в полных годах: ", 0, 80)
+
         updated = self._employees.update_employee(
             employee_id,
-            self._reader.read_non_empty("новое ФИО: "),
-            self._reader.read_non_empty("новый ИНН: "),
-            self._reader.read_non_empty("новая должность: "),
-            self._reader.read_date("дата приёма (ДД.ММ.ГГГГ): "),
-            self._reader.read_int("стаж в полных годах: ", 0, 80),
+            full_name,
+            inn,
+            position,
+            hire_date,
+            experience_years,
         )
         self._output(f"карточка ID {updated.employee_id} обновлена")
 
     def _dismiss_employee(self) -> None:
-        """Увольняет сотрудника без физического удаления записи."""
+        """Запрашивает сотрудника и допустимую дату увольнения."""
 
-        employee_id = self._reader.read_int("ID сотрудника: ", 1)
-        dismissal_date = self._reader.read_date("дата увольнения (ДД.ММ.ГГГГ): ")
+        def validate_employee(value: int) -> None:
+            """Не допускает повторное увольнение сотрудника."""
+
+            employee = self._employees.get_employee_by_id(value)
+            if employee.dismissal_date is not None:
+                raise ValueError("сотрудник уже уволен; выберите другого")
+
+        employee_id = self._reader.read_checked(
+            self._read_employee_id,
+            validate_employee,
+        )
+        current = self._employees.get_employee_by_id(employee_id)
+
+        def validate_date(value: date) -> None:
+            """Проверяет дату увольнения относительно даты приёма."""
+
+            if value < current.hire_date:
+                raise ValueError("увольнение не может быть раньше приёма на работу")
+
+        dismissal_date = self._reader.read_checked(
+            lambda: self._reader.read_date("дата увольнения (ДД.ММ.ГГГГ): "),
+            validate_date,
+        )
         employee = self._employees.dismiss_employee(employee_id, dismissal_date)
         self._output(f"сотрудник {employee.full_name} уволен")
 
@@ -227,15 +394,24 @@ class SalaryCalculatorCLI:
         self._output(format_timesheet(timesheet, self._employees.get_all_employees()))
 
     def _fill_timesheet(self) -> None:
-        """Запрашивает смены, больничный и отпуск сотрудника."""
+        """Проверяет каждое поле строки с учётом оставшейся нормы."""
 
-        period = self._period()
+        period = self._existing_period(self._timesheets.get)
         timesheet = self._timesheets.get(period)
+        if timesheet.closed:
+            raise ValueError("расчётный период закрыт")
+
         self._output(format_timesheet(timesheet, self._employees.get_all_employees()))
-        employee_id = self._reader.read_int("ID сотрудника в табеле: ", 1)
-        shifts = self._reader.read_int("отработано смен: ", 0)
-        sick_days = self._reader.read_int("больничный (дней): ", 0)
-        vacation_days = self._reader.read_int("отпуск (дней): ", 0)
+        employee_id = self._read_employee_id(timesheet.employee_ids)
+
+        shifts = self._reader.read_int("отработано смен: ", 0, timesheet.shift_norm)
+        sick_days = self._reader.read_int(
+            "больничный (дней): ", 0, timesheet.shift_norm - shifts
+        )
+        vacation_days = self._reader.read_int(
+            "отпуск (дней): ", 0, timesheet.shift_norm - shifts - sick_days
+        )
+
         entry = self._timesheets.fill(
             period, employee_id, shifts, sick_days, vacation_days
         )
@@ -244,7 +420,7 @@ class SalaryCalculatorCLI:
     def _calculate_statement(self) -> None:
         """Запускает расчёт месяца с подтверждением повторного расчёта."""
 
-        period = self._period()
+        period = self._existing_period(self._timesheets.get)
         replace_existing = False
         try:
             self._payroll.get_statement(period)
@@ -263,15 +439,18 @@ class SalaryCalculatorCLI:
     def _show_statement(self) -> None:
         """Показывает ведомость и её актуальность после изменения табеля."""
 
-        period = self._period()
+        period = self._existing_period(self._payroll.get_statement)
         statement = self._payroll.get_statement(period)
         self._output(format_statement(statement, self._payroll.is_current(period)))
 
     def _show_payslip(self) -> None:
         """Показывает текстовый расчётный листок выбранного работника."""
 
-        period = self._period()
-        employee_id = self._reader.read_int("ID сотрудника: ", 1)
+        period = self._existing_period(self._payroll.get_statement)
+        employee_id = self._reader.read_checked(
+            self._read_employee_id,
+            lambda value: self._payroll.get_payslip(period, value),
+        )
         result = self._payroll.get_payslip(period, employee_id)
         statement = self._payroll.get_statement(period)
         if not self._payroll.is_current(period):
@@ -281,7 +460,7 @@ class SalaryCalculatorCLI:
     def _close_period(self) -> None:
         """Закрывает проверенный период после подтверждения бухгалтера."""
 
-        period = self._period()
+        period = self._existing_period(self._timesheets.get)
         if self._reader.confirm(f"закрыть расчётный период {period}?"):
             self._payroll.close_period(period)
             self._output(f"период {period} закрыт")

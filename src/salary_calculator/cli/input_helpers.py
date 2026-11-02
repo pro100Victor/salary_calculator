@@ -3,6 +3,9 @@
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from typing import TypeVar
+
+T = TypeVar("T")
 
 
 class InputReader:
@@ -17,6 +20,22 @@ class InputReader:
 
         self._input = input_function or input
         self._output = output_function or print
+
+    def read_checked(
+        self,
+        read_value: Callable[[], T],
+        validate: Callable[[T], object],
+    ) -> T:
+        """Повторяет ввод одного поля до прохождения дополнительной проверки."""
+
+        while True:
+            value = read_value()
+            try:
+                validate(value)
+            except (ValueError, LookupError) as error:
+                self._output(f"ошибка: {error}")
+                continue
+            return value
 
     def read_non_empty(self, prompt: str) -> str:
         """Возвращает непустую строку."""

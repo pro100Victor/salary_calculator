@@ -41,6 +41,7 @@ class OrganizationService:
             kpp.strip(),
             address.strip(),
         )
+
         if not name or not address:
             raise ValueError("название и адрес организации обязательны")
         if len(inn) not in (10, 12) or not inn.isascii() or not inn.isdigit():

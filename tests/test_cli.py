@@ -63,10 +63,6 @@ class CLITest(unittest.TestCase):
                 "9",
                 "2026",
                 "9",
-                "1",
-                "0",
-                "0",
-                "0",
                 "0",
             ]
         )
@@ -76,6 +72,7 @@ class CLITest(unittest.TestCase):
             output_function=messages.append,
         )
         application = create_application(reader=reader, output=messages.append)
+
         application.run()
 
         output = "\n".join(messages)
