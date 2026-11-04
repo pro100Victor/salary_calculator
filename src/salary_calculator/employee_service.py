@@ -111,10 +111,17 @@ class EmployeeService:
 
         if not name:
             raise ValueError("ФИО не должно быть пустым")
-        if len(inn) != 12 or not inn.isascii() or not inn.isdigit():
-            raise ValueError("ИНН сотрудника должен содержать 12 цифр")
+
+        Employee.validate_inn(inn)
+
         if not isinstance(hire_date, date):
             raise ValueError("введите корректную дату приёма")
+
+    def validate_inn(self, value: str, except_id: int | None = None) -> None:
+        """Проверяет формат и уникальность ИНН без сохранения карточки."""
+
+        Employee.validate_inn(value)
+        self._check_inn_unique(value, except_id=except_id)
 
     def _check_inn_unique(self, inn: str, except_id: int | None = None) -> None:
         """Отклоняет дубликат ИНН среди кадровых карточек."""

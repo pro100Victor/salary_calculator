@@ -129,20 +129,11 @@ class SalaryCalculatorCLI:
         return Period(year, month)
 
     def _read_inn(self, employee_id: int | None = None) -> str:
-        """Запрашивает уникальный ИНН сотрудника с повтором ошибочного ввода."""
-
-        def validate(value: str) -> None:
-            """Проверяет формат ИНН и отсутствие другой карточки с ним."""
-
-            if len(value) != 12 or not value.isascii() or not value.isdigit():
-                raise ValueError("ИНН сотрудника должен содержать 12 цифр")
-            for employee in self._employees.get_all_employees():
-                if employee.inn == value and employee.employee_id != employee_id:
-                    raise ValueError("сотрудник с таким ИНН уже существует")
+        """Запрашивает ИНН до прохождения проверки формата и уникальности."""
 
         return self._reader.read_checked(
             lambda: self._reader.read_non_empty("ИНН сотрудника (12 цифр): "),
-            validate,
+            lambda value: self._employees.validate_inn(value, except_id=employee_id),
         )
 
     def _read_organization_inn(self) -> str:

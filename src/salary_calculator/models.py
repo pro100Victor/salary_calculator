@@ -69,6 +69,18 @@ class Employee:
     rate_per_shift: Decimal
     dismissal_date: date | None = None
 
+    @staticmethod
+    def validate_inn(inn: str) -> None:
+        """Проверяет формат ИНН сотрудника."""
+
+        if len(inn) != 12 or not inn.isascii() or not inn.isdigit():
+            raise ValueError("ИНН сотрудника должен содержать 12 цифр")
+
+    def __post_init__(self) -> None:
+        """Проверяет ИНН при создании карточки."""
+
+        self.validate_inn(self.inn)
+
     @property
     def status(self) -> str:
         """Показывает, числится ли сотрудник в штате сейчас."""
