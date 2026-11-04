@@ -129,7 +129,7 @@ class SalaryCalculatorCLI:
         return Period(year, month)
 
     def _read_inn(self, employee_id: int | None = None) -> str:
-        """Запрашивает ИНН до прохождения проверки формата и уникальности."""
+        """Запрашивает ИНН сотрудника до прохождения проверки."""
 
         return self._reader.read_checked(
             lambda: self._reader.read_non_empty("ИНН сотрудника (12 цифр): "),
@@ -137,35 +137,19 @@ class SalaryCalculatorCLI:
         )
 
     def _read_organization_inn(self) -> str:
-        """Запрашивает ИНН предприятия допустимой длины."""
-
-        def validate(value: str) -> None:
-            """Проверяет цифровой формат ИНН предприятия."""
-
-            if len(value) not in (10, 12) or not value.isascii() or not value.isdigit():
-                raise ValueError("ИНН организации должен содержать 10 или 12 цифр")
+        """Запрашивает ИНН организации до прохождения проверки."""
 
         return self._reader.read_checked(
             lambda: self._reader.read_non_empty("ИНН организации: "),
-            validate,
+            self._organization.validate_inn,
         )
 
     def _read_kpp(self, inn: str) -> str:
-        """Запрашивает КПП с учётом введённого ИНН организации."""
-
-        def validate(value: str) -> None:
-            """Проверяет формат КПП и отсутствие КПП у ИП."""
-
-            if len(inn) == 12 and value:
-                raise ValueError("для ИП с 12-значным ИНН оставьте КПП пустым")
-            if value and (
-                len(value) != 9 or not value.isascii() or not value.isdigit()
-            ):
-                raise ValueError("КПП должен содержать 9 цифр или быть пустым")
+        """Запрашивает КПП с учётом уже введённого ИНН."""
 
         return self._reader.read_checked(
             lambda: self._reader.read_optional("КПП (для ИП оставьте пустым): "),
-            validate,
+            lambda value: self._organization.validate_kpp(value, inn),
         )
 
     def _read_position(self) -> str:
@@ -192,56 +176,50 @@ class SalaryCalculatorCLI:
         )
 
     def _read_hire_date(self, dismissal_date: date | None = None) -> date:
-        """Запрашивает дату приёма с учётом существующего увольнения."""
-
-        def validate(value: date) -> None:
-            """Не допускает приём позже записанного увольнения."""
-
-            if dismissal_date is not None and value > dismissal_date:
-                raise ValueError("дата приёма не может быть позже даты увольнения")
+        """Запрашивает допустимую дату приёма."""
 
         return self._reader.read_checked(
             lambda: self._reader.read_date("дата приёма (ДД.ММ.ГГГГ): "),
-            validate,
+            lambda value: self._employees.validate_hire_date(value, dismissal_date),
         )
 
     def _read_rate(self) -> Decimal:
-        """Запрашивает допустимую положительную ставку за смену."""
-
-        def validate(value: Decimal) -> None:
-            """Проверяет предел ставки и точность до копеек."""
-
-            if value > Decimal("1000000000"):
-                raise ValueError("ставка за смену слишком велика")
-            if value <= 0 or value != value.quantize(Decimal("0.01")):
-                raise ValueError("ставка должна быть положительной, до копеек")
+        """Запрашивает базовую ставку за смену."""
 
         return self._reader.read_checked(
             lambda: self._reader.read_decimal("базовая ставка за смену: "),
-            validate,
+            self._positions.validate_base_rate,
         )
 
     def _read_seniority_percent(self) -> Decimal:
-        """Запрашивает надбавку за год стажа в допустимом диапазоне."""
-
-        def validate(value: Decimal) -> None:
-            """Ограничивает надбавку диапазоном от нуля до ста процентов."""
-
-            if value > 100:
-                raise ValueError("надбавка должна быть от 0 до 100%")
+        """Запрашивает процент надбавки за год стажа."""
 
         return self._reader.read_checked(
             lambda: self._reader.read_decimal("надбавка за год стажа (%): "),
-            validate,
+            self._positions.validate_seniority_percent,
+        )
+
+    def _read_experience_years(self) -> int:
+        """Запрашивает стаж в полных годах."""
+
+        return self._reader.read_checked(
+            lambda: self._reader.read_int("стаж в полных годах: "),
+            self._positions.validate_experience_years,
         )
 
     def _configure_organization(self) -> None:
         """Последовательно запрашивает и сохраняет реквизиты предприятия."""
 
-        name = self._reader.read_non_empty("название организации: ")
+        name = self._reader.read_checked(
+            lambda: self._reader.read_non_empty("название организации: "),
+            self._organization.validate_name,
+        )
         inn = self._read_organization_inn()
         kpp = self._read_kpp(inn)
-        address = self._reader.read_non_empty("адрес: ")
+        address = self._reader.read_checked(
+            lambda: self._reader.read_non_empty("адрес: "),
+            self._organization.validate_address,
+        )
 
         organization = self._organization.set_organization(
             name=name,
@@ -255,7 +233,10 @@ class SalaryCalculatorCLI:
         """Запрашивает должность и проверяет каждый параметр тарифа."""
 
         self._organization.get_organization()
-        name = self._reader.read_non_empty("должность: ")
+        name = self._reader.read_checked(
+            lambda: self._reader.read_non_empty("должность: "),
+            self._positions.validate_name,
+        )
         base_rate = self._read_rate()
         seniority_percent = self._read_seniority_percent()
 
@@ -274,11 +255,14 @@ class SalaryCalculatorCLI:
         self._organization.get_organization()
         self._show_positions()
 
-        full_name = self._reader.read_non_empty("ФИО: ")
+        full_name = self._reader.read_checked(
+            lambda: self._reader.read_non_empty("ФИО: "),
+            self._employees.validate_full_name,
+        )
         inn = self._read_inn()
         position = self._read_position()
         hire_date = self._read_hire_date()
-        experience_years = self._reader.read_int("стаж в полных годах: ", 0, 80)
+        experience_years = self._read_experience_years()
 
         employee = self._employees.add_employee(
             full_name=full_name,
@@ -316,7 +300,7 @@ class SalaryCalculatorCLI:
         inn = self._read_inn(employee_id)
         position = self._read_position()
         hire_date = self._read_hire_date(current.dismissal_date)
-        experience_years = self._reader.read_int("стаж в полных годах: ", 0, 80)
+        experience_years = self._read_experience_years()
 
         updated = self._employees.update_employee(
             employee_id,
@@ -342,18 +326,12 @@ class SalaryCalculatorCLI:
             self._read_employee_id,
             validate_employee,
         )
-        current = self._employees.get_employee_by_id(employee_id)
-
-        def validate_date(value: date) -> None:
-            """Проверяет дату увольнения относительно даты приёма."""
-
-            if value < current.hire_date:
-                raise ValueError("увольнение не может быть раньше приёма на работу")
 
         dismissal_date = self._reader.read_checked(
             lambda: self._reader.read_date("дата увольнения (ДД.ММ.ГГГГ): "),
-            validate_date,
+            lambda value: self._employees.validate_dismissal_date(employee_id, value),
         )
+
         employee = self._employees.dismiss_employee(employee_id, dismissal_date)
         self._output(f"сотрудник {employee.full_name} уволен")
 
