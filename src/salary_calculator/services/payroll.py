@@ -1,9 +1,12 @@
 """Атомарное формирование расчётной ведомости по заполненному табелю."""
 
-from salary_calculator.calculators import ShiftSalaryCalculator, TaxCalculator
-from salary_calculator.contracts import SalaryCalculationStrategy
 from salary_calculator.models import PayrollResult, PayrollStatement, Period
 from salary_calculator.repositories.statement import StatementRepository
+from salary_calculator.services.calculator.strategies.salary import (
+    SalaryCalculationStrategy,
+    ShiftSalaryCalculator,
+)
+from salary_calculator.services.calculator.strategies.tax import TaxCalculator
 from salary_calculator.services.employee import EmployeeService
 from salary_calculator.services.organization import OrganizationService
 from salary_calculator.services.timesheet import TimesheetService
