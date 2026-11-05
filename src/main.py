@@ -4,11 +4,9 @@ from collections.abc import Callable
 
 from salary_calculator.cli import SalaryCalculatorCLI
 from salary_calculator.cli.input_helpers import InputReader
-from salary_calculator.repositories import (
-    InMemoryEmployeeRepository,
-    InMemoryStatementRepository,
-    InMemoryTimesheetRepository,
-)
+from salary_calculator.repositories.employee import InMemoryEmployeeRepository
+from salary_calculator.repositories.statement import InMemoryStatementRepository
+from salary_calculator.repositories.timesheet import InMemoryTimesheetRepository
 from salary_calculator.services.auth import AuthService
 from salary_calculator.services.calendar import CalendarService
 from salary_calculator.services.employee import EmployeeService

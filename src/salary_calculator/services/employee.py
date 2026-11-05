@@ -3,8 +3,8 @@
 from dataclasses import replace
 from datetime import date
 
-from salary_calculator.contracts import EmployeeRepository
 from salary_calculator.models import Employee, Period
+from salary_calculator.repositories.employee import EmployeeRepository
 from salary_calculator.services.organization import OrganizationService
 
 

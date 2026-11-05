@@ -1,7 +1,7 @@
 """Формирование, заполнение и закрытие месячного табеля."""
 
-from salary_calculator.contracts import TimesheetRepository
 from salary_calculator.models import Period, Timesheet, TimesheetEntry
+from salary_calculator.repositories.timesheet import TimesheetRepository
 from salary_calculator.services.calendar import CalendarService
 from salary_calculator.services.employee import EmployeeService
 

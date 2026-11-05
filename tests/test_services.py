@@ -5,17 +5,19 @@ from abc import ABC
 from datetime import date
 from decimal import Decimal
 
-from salary_calculator.contracts import (
-    EmployeeRepository,
-    SalaryCalculationStrategy,
-    StatementRepository,
-    TimesheetRepository,
-)
+from salary_calculator.contracts import SalaryCalculationStrategy
 from salary_calculator.models import Period
-from salary_calculator.repositories import (
+from salary_calculator.repositories.employee import (
+    EmployeeRepository,
     InMemoryEmployeeRepository,
+)
+from salary_calculator.repositories.statement import (
     InMemoryStatementRepository,
+    StatementRepository,
+)
+from salary_calculator.repositories.timesheet import (
     InMemoryTimesheetRepository,
+    TimesheetRepository,
 )
 from salary_calculator.services.calendar import CalendarService
 from salary_calculator.services.employee import EmployeeService
