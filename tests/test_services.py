@@ -5,23 +5,23 @@ from abc import ABC
 from datetime import date
 from decimal import Decimal
 
-from salary_calculator.calendar_service import CalendarService
 from salary_calculator.contracts import (
     EmployeeRepository,
     SalaryCalculationStrategy,
     StatementRepository,
     TimesheetRepository,
 )
-from salary_calculator.employee_service import EmployeeService
 from salary_calculator.models import Period
-from salary_calculator.organization_service import OrganizationService
-from salary_calculator.payroll_service import PayrollService
 from salary_calculator.repositories import (
     InMemoryEmployeeRepository,
     InMemoryStatementRepository,
     InMemoryTimesheetRepository,
 )
-from salary_calculator.timesheet_service import TimesheetService
+from salary_calculator.services.calendar import CalendarService
+from salary_calculator.services.employee import EmployeeService
+from salary_calculator.services.organization import OrganizationService
+from salary_calculator.services.payroll import PayrollService
+from salary_calculator.services.timesheet import TimesheetService
 
 
 class IncompleteStrategy(SalaryCalculationStrategy):

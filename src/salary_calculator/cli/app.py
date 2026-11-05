@@ -4,8 +4,6 @@ from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
 
-from salary_calculator.auth_service import AuthService
-from salary_calculator.calendar_service import CalendarService
 from salary_calculator.cli.input_helpers import InputReader
 from salary_calculator.cli.presenters import (
     format_employees,
@@ -13,11 +11,13 @@ from salary_calculator.cli.presenters import (
     format_statement,
     format_timesheet,
 )
-from salary_calculator.employee_service import EmployeeService
 from salary_calculator.models import Period
-from salary_calculator.organization_service import OrganizationService
-from salary_calculator.payroll_service import PayrollService
-from salary_calculator.timesheet_service import TimesheetService
+from salary_calculator.services.auth import AuthService
+from salary_calculator.services.calendar import CalendarService
+from salary_calculator.services.employee import EmployeeService
+from salary_calculator.services.organization import OrganizationService
+from salary_calculator.services.payroll import PayrollService
+from salary_calculator.services.timesheet import TimesheetService
 
 
 class SalaryCalculatorCLI:
@@ -124,8 +124,14 @@ class SalaryCalculatorCLI:
     def _period(self) -> Period:
         """Запрашивает расчётный месяц и год."""
 
-        year = self._reader.read_int("год: ", 1, 9999)
-        month = self._reader.read_int("месяц (1–12): ", 1, 12)
+        year = self._reader.read_checked(
+            lambda: self._reader.read_int("год: "),
+            Period.validate_year,
+        )
+        month = self._reader.read_checked(
+            lambda: self._reader.read_int("месяц (1–12): "),
+            Period.validate_month,
+        )
         return Period(year, month)
 
     def _read_inn(self, employee_id: int | None = None) -> str:
@@ -188,7 +194,7 @@ class SalaryCalculatorCLI:
 
         return self._reader.read_checked(
             lambda: self._reader.read_decimal("базовая ставка за смену: "),
-            self._positions.validate_base_rate,
+            self._organization.validate_base_rate,
         )
 
     def _read_seniority_percent(self) -> Decimal:
@@ -196,7 +202,7 @@ class SalaryCalculatorCLI:
 
         return self._reader.read_checked(
             lambda: self._reader.read_decimal("надбавка за год стажа (%): "),
-            self._positions.validate_seniority_percent,
+            self._organization.validate_seniority_percent,
         )
 
     def _read_experience_years(self) -> int:
@@ -204,7 +210,7 @@ class SalaryCalculatorCLI:
 
         return self._reader.read_checked(
             lambda: self._reader.read_int("стаж в полных годах: "),
-            self._positions.validate_experience_years,
+            self._organization.validate_experience_years,
         )
 
     def _configure_organization(self) -> None:
@@ -235,7 +241,7 @@ class SalaryCalculatorCLI:
         self._organization.get_organization()
         name = self._reader.read_checked(
             lambda: self._reader.read_non_empty("должность: "),
-            self._positions.validate_name,
+            self._organization.validate_position_name,
         )
         base_rate = self._read_rate()
         seniority_percent = self._read_seniority_percent()
@@ -350,7 +356,10 @@ class SalaryCalculatorCLI:
             pass
         else:
             raise ValueError("табель уже создан; норма периода зафиксирована")
-        norm = self._reader.read_int("норма смен за месяц: ", 1, period.end.day)
+        norm = self._reader.read_checked(
+            lambda: self._reader.read_int("норма смен за месяц: "),
+            lambda value: self._calendar.validate_norm(period, value),
+        )
         self._calendar.set_norm(period, norm)
         self._output(f"норма {norm} смен сохранена для {period}")
 
@@ -373,12 +382,17 @@ class SalaryCalculatorCLI:
         self._output(format_timesheet(timesheet, self._employees.get_all_employees()))
         employee_id = self._read_employee_id(timesheet.employee_ids)
 
-        shifts = self._reader.read_int("отработано смен: ", 0, timesheet.shift_norm)
-        sick_days = self._reader.read_int(
-            "больничный (дней): ", 0, timesheet.shift_norm - shifts
+        shifts = self._reader.read_checked(
+            lambda: self._reader.read_int("отработано смен: "),
+            timesheet.validate_days,
         )
-        vacation_days = self._reader.read_int(
-            "отпуск (дней): ", 0, timesheet.shift_norm - shifts - sick_days
+        sick_days = self._reader.read_checked(
+            lambda: self._reader.read_int("больничный (дней): "),
+            lambda value: timesheet.validate_days(value, shifts),
+        )
+        vacation_days = self._reader.read_checked(
+            lambda: self._reader.read_int("отпуск (дней): "),
+            lambda value: timesheet.validate_days(value, shifts + sick_days),
         )
 
         entry = self._timesheets.fill(

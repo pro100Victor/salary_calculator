@@ -5,7 +5,7 @@ from datetime import date
 
 from salary_calculator.contracts import EmployeeRepository
 from salary_calculator.models import Employee, Period
-from salary_calculator.organization_service import OrganizationService
+from salary_calculator.services.organization import OrganizationService
 
 
 class EmployeeService:
@@ -63,8 +63,7 @@ class EmployeeService:
         self._validate(name, inn, hire_date)
         self._check_inn_unique(inn, except_id=employee_id)
         rate = self._organization.rate_for(position, experience_years)
-        if old.dismissal_date is not None and hire_date > old.dismissal_date:
-            raise ValueError("дата приёма не может быть позже даты увольнения")
+        self.validate_hire_date(hire_date, old.dismissal_date)
         updated = replace(
             old,
             full_name=name,
@@ -81,12 +80,7 @@ class EmployeeService:
         """Устанавливает дату увольнения без удаления истории сотрудника."""
 
         employee = self._repository.get(employee_id)
-        if not isinstance(dismissal_date, date):
-            raise ValueError("введите корректную дату увольнения")
-        if dismissal_date < employee.hire_date:
-            raise ValueError("увольнение не может быть раньше приёма на работу")
-        if employee.dismissal_date is not None:
-            raise ValueError("сотрудник уже уволен")
+        self.validate_dismissal_date(employee_id, dismissal_date)
         updated = replace(employee, dismissal_date=dismissal_date)
         self._repository.save(updated)
         return updated
@@ -109,13 +103,11 @@ class EmployeeService:
     def _validate(self, name: str, inn: str, hire_date: date) -> None:
         """Проверяет обязательные кадровые сведения."""
 
-        if not name:
-            raise ValueError("ФИО не должно быть пустым")
+        self.validate_full_name(name)
 
         Employee.validate_inn(inn)
 
-        if not isinstance(hire_date, date):
-            raise ValueError("введите корректную дату приёма")
+        self.validate_hire_date(hire_date)
 
     def validate_inn(self, value: str, except_id: int | None = None) -> None:
         """Проверяет формат и уникальность ИНН без сохранения карточки."""
@@ -129,3 +121,27 @@ class EmployeeService:
         for item in self.get_all_employees():
             if item.inn == inn and item.employee_id != except_id:
                 raise ValueError("сотрудник с таким ИНН уже существует")
+
+    @staticmethod
+    def validate_full_name(value: str) -> None:
+        """Проверяет ФИО сотрудника."""
+        if not value.strip():
+            raise ValueError("ФИО не должно быть пустым")
+
+    @staticmethod
+    def validate_hire_date(value: date, dismissal_date: date | None = None) -> None:
+        """Проверяет дату приёма."""
+        if not isinstance(value, date):
+            raise ValueError("введите корректную дату приёма")
+        if dismissal_date is not None and value > dismissal_date:
+            raise ValueError("дата приёма не может быть позже даты увольнения")
+
+    def validate_dismissal_date(self, employee_id: int, dismissal_date: date) -> None:
+        """Проверяет дату увольнения без изменения карточки."""
+        employee = self.get_employee_by_id(employee_id)
+        if not isinstance(dismissal_date, date):
+            raise ValueError("введите корректную дату увольнения")
+        if dismissal_date < employee.hire_date:
+            raise ValueError("увольнение не может быть раньше приёма на работу")
+        if employee.dismissal_date is not None:
+            raise ValueError("сотрудник уже уволен")

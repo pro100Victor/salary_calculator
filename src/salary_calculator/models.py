@@ -14,10 +14,24 @@ class Period:
     month: int
 
     def __post_init__(self) -> None:
-        """Проверяет существование выбранного месяца."""
+        """Проверяет год и месяц при создании периода."""
 
-        if not 1 <= self.year <= 9999 or not 1 <= self.month <= 12:
-            raise ValueError("укажите корректный год и месяц")
+        self.validate_year(self.year)
+        self.validate_month(self.month)
+
+    @staticmethod
+    def validate_year(value: int) -> None:
+        """Проверяет год расчётного периода."""
+
+        if type(value) is not int or not 1 <= value <= 9999:
+            raise ValueError("год должен быть целым числом от 1 до 9999")
+
+    @staticmethod
+    def validate_month(value: int) -> None:
+        """Проверяет месяц расчётного периода."""
+
+        if type(value) is not int or not 1 <= value <= 12:
+            raise ValueError("месяц должен быть целым числом от 1 до 12")
 
     @property
     def start(self) -> date:
@@ -121,6 +135,16 @@ class Timesheet:
     entries: dict[int, TimesheetEntry] = field(default_factory=dict)
     revision: int = 0
     closed: bool = False
+
+    def validate_days(self, value: int, used_days: int = 0) -> None:
+        """Проверяет количество дней с учётом уже распределённой нормы."""
+
+        if type(value) is not int:
+            raise ValueError("смены и дни должны быть целыми числами")
+        if value < 0:
+            raise ValueError("смены и дни не могут быть отрицательными")
+        if used_days + value > self.shift_norm:
+            raise ValueError("сумма смен, больничного и отпуска превышает норму")
 
 
 @dataclass(frozen=True)

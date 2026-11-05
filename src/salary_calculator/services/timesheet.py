@@ -1,9 +1,9 @@
 """Формирование, заполнение и закрытие месячного табеля."""
 
-from salary_calculator.calendar_service import CalendarService
 from salary_calculator.contracts import TimesheetRepository
-from salary_calculator.employee_service import EmployeeService
 from salary_calculator.models import Period, Timesheet, TimesheetEntry
+from salary_calculator.services.calendar import CalendarService
+from salary_calculator.services.employee import EmployeeService
 
 
 class TimesheetService:
@@ -56,16 +56,12 @@ class TimesheetService:
         if employee_id not in timesheet.employee_ids:
             raise ValueError("сотрудника нет в табеле выбранного периода")
         numbers = (worked_shifts, sick_days, vacation_days)
-        if any(
-            isinstance(number, bool) or not isinstance(number, int)
-            for number in numbers
-        ):
-            raise ValueError("смены и дни должны быть целыми числами")
-        if any(number < 0 for number in numbers):
-            raise ValueError("смены и дни не могут быть отрицательными")
+        used_days = 0
+        for value in numbers:
+            timesheet.validate_days(value, used_days)
+            used_days += value
+
         entry = TimesheetEntry(employee_id, *numbers)
-        if entry.total_days > timesheet.shift_norm:
-            raise ValueError("сумма смен, больничного и отпуска превышает норму")
         if timesheet.entries.get(employee_id) != entry:
             timesheet.revision += 1
         timesheet.entries[employee_id] = entry

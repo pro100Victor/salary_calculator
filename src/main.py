@@ -2,19 +2,19 @@
 
 from collections.abc import Callable
 
-from salary_calculator.auth_service import AuthService
-from salary_calculator.calendar_service import CalendarService
 from salary_calculator.cli import SalaryCalculatorCLI
 from salary_calculator.cli.input_helpers import InputReader
-from salary_calculator.employee_service import EmployeeService
-from salary_calculator.organization_service import OrganizationService
-from salary_calculator.payroll_service import PayrollService
 from salary_calculator.repositories import (
     InMemoryEmployeeRepository,
     InMemoryStatementRepository,
     InMemoryTimesheetRepository,
 )
-from salary_calculator.timesheet_service import TimesheetService
+from salary_calculator.services.auth import AuthService
+from salary_calculator.services.calendar import CalendarService
+from salary_calculator.services.employee import EmployeeService
+from salary_calculator.services.organization import OrganizationService
+from salary_calculator.services.payroll import PayrollService
+from salary_calculator.services.timesheet import TimesheetService
 
 
 def create_application(

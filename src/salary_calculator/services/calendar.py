@@ -15,16 +15,18 @@ class CalendarService:
         self._overrides: dict[Period, int] = {}
 
     def set_norm(self, period: Period, shifts: int) -> None:
-        """Задаёт норму смен на месяц для конкретной организации."""
+        """Задаёт норму смен на месяц."""
 
-        max_days = monthrange(period.year, period.month)[1]
-        if (
-            isinstance(shifts, bool)
-            or not isinstance(shifts, int)
-            or not 1 <= shifts <= max_days
-        ):
-            raise ValueError(f"норма смен должна быть от 1 до {max_days}")
+        self.validate_norm(period, shifts)
         self._overrides[period] = shifts
+
+    @staticmethod
+    def validate_norm(period: Period, shifts: int) -> None:
+        """Проверяет норму без изменения настроек календаря."""
+
+        max_days = period.end.day
+        if type(shifts) is not int or not 1 <= shifts <= max_days:
+            raise ValueError(f"норма смен должна быть от 1 до {max_days}")
 
     def get_norm(self, period: Period) -> int:
         """Возвращает введённую норму либо число будней без праздников."""

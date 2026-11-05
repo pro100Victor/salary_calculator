@@ -2,10 +2,10 @@
 
 from salary_calculator.calculators import ShiftSalaryCalculator, TaxCalculator
 from salary_calculator.contracts import SalaryCalculationStrategy, StatementRepository
-from salary_calculator.employee_service import EmployeeService
 from salary_calculator.models import PayrollResult, PayrollStatement, Period
-from salary_calculator.organization_service import OrganizationService
-from salary_calculator.timesheet_service import TimesheetService
+from salary_calculator.services.employee import EmployeeService
+from salary_calculator.services.organization import OrganizationService
+from salary_calculator.services.timesheet import TimesheetService
 
 
 class PayrollService:
