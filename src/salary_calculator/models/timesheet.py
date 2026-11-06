@@ -18,9 +18,6 @@ class Timesheet:
     def validate_days(self, value: int, used_days: int = 0) -> None:
         """Проверяет количество дней с учётом уже распределённой нормы."""
 
-        if type(value) is not int:
-            raise ValueError("смены и дни должны быть целыми числами")
-        if value < 0:
-            raise ValueError("смены и дни не могут быть отрицательными")
+        TimesheetEntry.validate_day_count(value)
         if used_days + value > self.shift_norm:
             raise ValueError("сумма смен, больничного и отпуска превышает норму")

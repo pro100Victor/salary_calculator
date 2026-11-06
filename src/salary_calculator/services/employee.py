@@ -124,24 +124,19 @@ class EmployeeService:
 
     @staticmethod
     def validate_full_name(value: str) -> None:
-        """Проверяет ФИО сотрудника."""
-        if not value.strip():
-            raise ValueError("ФИО не должно быть пустым")
+        """Проверяет ФИО для предварительного ввода."""
+        Employee.validate_full_name(value)
 
     @staticmethod
-    def validate_hire_date(value: date, dismissal_date: date | None = None) -> None:
-        """Проверяет дату приёма."""
-        if not isinstance(value, date):
-            raise ValueError("введите корректную дату приёма")
-        if dismissal_date is not None and value > dismissal_date:
-            raise ValueError("дата приёма не может быть позже даты увольнения")
+    def validate_hire_date(
+            value: date, dismissal_date: date | None = None
+    ) -> None:
+        """Проверяет дату приёма для предварительного ввода."""
+        Employee.validate_hire_date(value, dismissal_date)
 
     def validate_dismissal_date(self, employee_id: int, dismissal_date: date) -> None:
-        """Проверяет дату увольнения без изменения карточки."""
+        """Проверяет возможность увольнения без изменения карточки."""
         employee = self.get_employee_by_id(employee_id)
-        if not isinstance(dismissal_date, date):
-            raise ValueError("введите корректную дату увольнения")
-        if dismissal_date < employee.hire_date:
-            raise ValueError("увольнение не может быть раньше приёма на работу")
+        Employee.validate_dismissal_date(dismissal_date, employee.hire_date)
         if employee.dismissal_date is not None:
             raise ValueError("сотрудник уже уволен")
