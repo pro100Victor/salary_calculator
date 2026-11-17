@@ -1,3 +1,11 @@
+# Уточнение после реализации части инженера 1, ЛР4
+
+ORM и мапперы уже находятся в db/models и db/mappers; единственный Base — db/base.py. SQL-реализации добавлены в файлы репозиториев рядом с ABC/InMemory. build_sql_services(session) в application/sql_services.py собирает готовые сервисы на внешней Session и не управляет транзакцией.
+
+Фабрика пока остаётся InMemory. Инженер 3 должен реализовать PostgreSQL SessionFactory/SQLServiceProvider, подключить фабрику, создать и проверить Alembic-миграции и Compose. Тестовый SQL-провайдер из tests/support нельзя подключать в рабочее приложение. Подробности: docs/ENGINEER3_AFTER_ENGINEER1.md.
+
+Публичные методы сервисов и HTTP-поля сохранены. Схема поддерживает одну организацию на установку. Не переносите формулы во frontend, не удаляйте domain dataclass, не применяйте Base.metadata.create_all(). Проверки SQLAlchemy выполнены на SQLite через Alembic Operations; это не проверка PostgreSQL-блокировок. ER: docs/ER.md и docs/ER.svg.
+
 # Инструкции ИИ-агенту: Salary Calculator
 
 # Текущий этап — лабораторная работа 4
