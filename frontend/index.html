@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Учебный сервис учёта рабочего времени и расчёта заработной платы малого предприятия">
+  <title>Salary Calculator — расчёт зарплаты</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script type="module" src="/assets/js/app.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#home" data-go="home"><span class="brand-icon">S</span><span>Salary<br>Calculator</span></a>
+    <p class="nav-caption">РАБОЧЕЕ ПРОСТРАНСТВО</p>
+    <nav aria-label="Основное меню">
+      <button data-page="home" class="active"><span>⌂</span>Главная</button>
+      <button data-page="employees"><span>♙</span>Сотрудники</button>
+      <button data-page="timesheet"><span>▦</span>Табель рабочего времени</button>
+      <button data-page="payroll"><span>≡</span>Расчётная ведомость</button>
+      <button data-page="settings"><span>⚙</span>Настройки предприятия</button>
+    </nav>
+    <div class="sidebar-bottom"><span class="status-dot"></span> Учебный проект · ЛР 4<br><small>ВолгГТУ / САПР и ПК</small></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span id="organization-name">Малое предприятие</span><div><span class="avatar">Б</span><span>Бухгалтер</span><button id="logout" class="text-button">Выйти</button></div></header>
+    <main>
+      <div class="page-heading"><div><h1 id="page-title">Salary Calculator</h1><p id="page-subtitle">Главная</p></div><span class="edition">Учёт и расчёт зарплаты</span></div>
+      <p id="storage-mode" class="storage-note"></p>
+      <div id="notice" role="status" aria-live="polite" hidden></div>
+      <div id="period-controls" class="period-controls" hidden>
+        <label>Год<input id="year" type="number" min="1" max="9999" required></label>
+        <label>Месяц<select id="month"></select></label>
+        <button id="load-period" class="secondary">Открыть период</button><span id="period-badge" class="badge"></span>
+      </div>
+      <section id="home" class="page"></section>
+      <section id="employees" class="page" hidden></section>
+      <section id="timesheet" class="page" hidden></section>
+      <section id="payroll" class="page" hidden></section>
+      <section id="settings" class="page" hidden></section>
+      <footer>Salary Calculator <span>Учебная модель · оплата по сменам · НДФЛ 13%</span></footer>
+    </main>
+  </div>
+  <dialog id="form-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><div><p class="eyebrow">SALARY CALCULATOR</p><h2 id="dialog-title"></h2></div><button type="button" id="close-dialog" class="icon-button" aria-label="Закрыть">×</button></div><div id="dialog-content"></div></dialog>
+  <dialog id="login-dialog" aria-labelledby="login-title"><div class="login-brand">S</div><h2 id="login-title">Добро пожаловать</h2><p class="muted">Войдите в рабочее пространство бухгалтера</p><form id="login-form"><label>Логин<input name="username" autocomplete="username" required value="admin"></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><p class="form-error" role="alert"></p><button class="primary" type="submit">Войти в систему</button></form><p class="muted small">Учебная учётная запись: admin / admin</p></dialog>
+</body>
+</html>
