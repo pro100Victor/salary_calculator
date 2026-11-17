@@ -1,8 +1,7 @@
-
-
 from decimal import ROUND_HALF_UP, Decimal
 
 KOPECK = Decimal("0.01")
+
 
 class TaxCalculator:
     """Удерживает установленный для учебной модели НДФЛ 13%."""

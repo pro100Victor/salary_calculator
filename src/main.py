@@ -1,42 +1,25 @@
-"""Единая точка входа, содержащая только сборку приложения."""
-
 from collections.abc import Callable
 
-from salary_calculator.cli import SalaryCalculatorCLI
 from salary_calculator.cli.input_helpers import InputReader
-from salary_calculator.repositories.employee import InMemoryEmployeeRepository
-from salary_calculator.repositories.statement import InMemoryStatementRepository
-from salary_calculator.repositories.timesheet import InMemoryTimesheetRepository
+
+from salary_calculator.application.factory import create_provider
+from salary_calculator.application.provider import ServiceProvider
+from salary_calculator.cli import SalaryCalculatorCLI
 from salary_calculator.services.auth import AuthService
-from salary_calculator.services.calendar import CalendarService
-from salary_calculator.services.employee import EmployeeService
-from salary_calculator.services.organization import OrganizationService
-from salary_calculator.services.payroll import PayrollService
-from salary_calculator.services.timesheet import TimesheetService
 
 
 def create_application(
     reader: InputReader | None = None,
     output: Callable[[str], None] | None = None,
+    provider: ServiceProvider | None = None,
 ) -> SalaryCalculatorCLI:
-    """Соединяет InMemory-хранилища, сервисы и консольный интерфейс."""
+    """Передаёт интерфейсу провайдер; сервисы открываются на каждую команду."""
 
-    organization = OrganizationService()
-    employees = EmployeeService(InMemoryEmployeeRepository(), organization)
-    calendar = CalendarService()
-    timesheets = TimesheetService(InMemoryTimesheetRepository(), employees, calendar)
-    payroll = PayrollService(
-        InMemoryStatementRepository(), timesheets, employees, organization
-    )
     return SalaryCalculatorCLI(
         AuthService(),
-        organization,
-        employees,
-        calendar,
-        timesheets,
-        payroll,
-        reader,
-        output,
+        reader=reader,
+        output=output,
+        provider=provider or create_provider(),
     )
 
 

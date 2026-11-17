@@ -128,15 +128,13 @@ class EmployeeService:
         Employee.validate_full_name(value)
 
     @staticmethod
-    def validate_hire_date(
-            value: date, dismissal_date: date | None = None
-    ) -> None:
+    def validate_hire_date(value: date, dismissal_date: date | None = None) -> None:
         """Проверяет дату приёма для предварительного ввода."""
-        Employee.validate_hire_date(value, dismissal_date)
+        Employee.validate_dates(value, dismissal_date)
 
     def validate_dismissal_date(self, employee_id: int, dismissal_date: date) -> None:
         """Проверяет возможность увольнения без изменения карточки."""
         employee = self.get_employee_by_id(employee_id)
-        Employee.validate_dismissal_date(dismissal_date, employee.hire_date)
+        Employee.validate_dates(employee.hire_date, dismissal_date)
         if employee.dismissal_date is not None:
             raise ValueError("сотрудник уже уволен")

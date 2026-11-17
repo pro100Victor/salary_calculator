@@ -1,9 +1,13 @@
 """Пользовательские сценарии CLI для всех функций учебного прототипа."""
 
 from collections.abc import Callable
+from contextlib import nullcontext
 from datetime import date
 from decimal import Decimal
 
+from salary_calculator.application.errors import StorageError
+from salary_calculator.application.provider import ServiceProvider
+from salary_calculator.application.services import ApplicationServices
 from salary_calculator.cli.input_helpers import InputReader
 from salary_calculator.cli.presenters import (
     format_employees,
@@ -26,22 +30,32 @@ class SalaryCalculatorCLI:
     def __init__(
         self,
         auth: AuthService,
-        organization: OrganizationService,
-        employees: EmployeeService,
-        calendar: CalendarService,
-        timesheets: TimesheetService,
-        payroll: PayrollService,
+        organization: OrganizationService | None = None,
+        employees: EmployeeService | None = None,
+        calendar: CalendarService | None = None,
+        timesheets: TimesheetService | None = None,
+        payroll: PayrollService | None = None,
         reader: InputReader | None = None,
         output: Callable[[str], None] | None = None,
+        provider: ServiceProvider | None = None,
     ) -> None:
         """Принимает подготовленные сервисы и функции ввода-вывода."""
 
         self._auth = auth
-        self._organization = organization
-        self._employees = employees
-        self._calendar = calendar
-        self._timesheets = timesheets
-        self._payroll = payroll
+        self._provider = provider
+        self._legacy_services = None
+        if provider is None:
+            if (
+                organization is None
+                or employees is None
+                or calendar is None
+                or timesheets is None
+                or payroll is None
+            ):
+                raise ValueError("передайте провайдер или полный набор сервисов")
+            self._legacy_services = ApplicationServices(
+                organization, employees, calendar, timesheets, payroll
+            )
         self._output = output or print
         self._reader = reader or InputReader(output_function=self._output)
         self._running = True
@@ -66,7 +80,7 @@ class SalaryCalculatorCLI:
             0: self._stop,
         }
 
-        self._output("Salary Calculator — лабораторная работа №3")
+        self._output("Salary Calculator — терминальный интерфейс")
         self._output("Учебная учётная запись: admin / admin")
         try:
             if not self._login():
@@ -76,13 +90,34 @@ class SalaryCalculatorCLI:
                 try:
                     choice = self._reader.read_int("выберите действие: ", 0, 13)
                     self._auth.require_login()
-                    actions[choice]()
-                except (ValueError, LookupError, PermissionError) as error:
+                    operation = (
+                        self._provider.operation()
+                        if self._provider
+                        else nullcontext(self._legacy_services)
+                    )
+                    with operation as services:
+                        self._bind_services(services)
+                        actions[choice]()
+                except (
+                    ValueError,
+                    LookupError,
+                    PermissionError,
+                    StorageError,
+                ) as error:
                     self._output(f"ошибка: {error}")
         except (EOFError, KeyboardInterrupt):
             self._output("\nработа программы завершена")
         finally:
             self._auth.logout()
+
+    def _bind_services(self, services: ApplicationServices) -> None:
+        """Подключает сервисы только текущей пользовательской операции."""
+
+        self._organization = services.organization
+        self._employees = services.employees
+        self._calendar = services.calendar
+        self._timesheets = services.timesheets
+        self._payroll = services.payroll
 
     def _existing_period(self, lookup: Callable[[Period], object]) -> Period:
         """Повторяет выбор периода, пока нужные данные не будут найдены."""

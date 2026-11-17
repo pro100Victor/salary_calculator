@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 KOPECK = Decimal("0.01")
 
+
 def as_decimal(value: Decimal | str | float) -> Decimal:
     """Преобразует число в конечный Decimal без двоичной ошибки float."""
 

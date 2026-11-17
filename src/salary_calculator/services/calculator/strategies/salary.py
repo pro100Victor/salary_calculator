@@ -5,7 +5,6 @@ from salary_calculator.contracts import SalaryCalculationStrategy
 KOPECK = Decimal("0.01")
 
 
-
 class ShiftSalaryCalculator(SalaryCalculationStrategy):
     """Рассчитывает начисление по ставке за рабочую смену."""
 

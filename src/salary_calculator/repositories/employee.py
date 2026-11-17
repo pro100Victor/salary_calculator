@@ -18,6 +18,7 @@ class EmployeeRepository(ABC):
     def list_all(self) -> list[Employee]:
         """Возвращает все карточки сотрудников."""
 
+
 class InMemoryEmployeeRepository(EmployeeRepository):
     """Хранит кадровые карточки в словаре по идентификатору."""
 
