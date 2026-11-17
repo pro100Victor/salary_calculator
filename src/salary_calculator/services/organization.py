@@ -3,6 +3,14 @@
 from decimal import ROUND_HALF_UP, Decimal
 
 from salary_calculator.models import Employee, Organization, Position
+from salary_calculator.repositories.organization import (
+    InMemoryOrganizationRepository,
+    OrganizationRepository,
+)
+from salary_calculator.repositories.position import (
+    InMemoryPositionRepository,
+    PositionRepository,
+)
 
 KOPECK = Decimal("0.01")
 
@@ -10,11 +18,18 @@ KOPECK = Decimal("0.01")
 class OrganizationService:
     """Хранит реквизиты организации и её собственные тарифы."""
 
-    def __init__(self) -> None:
-        """Создаёт пустую конфигурацию предприятия."""
-
-        self._organization: Organization | None = None
-        self._positions: dict[str, Position] = {}
+    def __init__(
+        self,
+        repository: OrganizationRepository | None = None,
+        positions: PositionRepository | None = None,
+    ) -> None:
+        """Принимает хранилища; прежняя сборка без аргументов остаётся InMemory."""
+        self._repository = (
+            repository if repository is not None else InMemoryOrganizationRepository()
+        )
+        self._positions = (
+            positions if positions is not None else InMemoryPositionRepository()
+        )
 
     @staticmethod
     def validate_name(value: str) -> str:
@@ -45,15 +60,14 @@ class OrganizationService:
         kpp = self.validate_kpp(kpp, inn)
         address = self.validate_address(address)
 
-        self._organization = Organization(name, inn, kpp, address)
-        return self._organization
+        organization = Organization(name, inn, kpp, address)
+        self._repository.save(organization)
+        return organization
 
     def get_organization(self) -> Organization:
         """Возвращает настроенное предприятие."""
 
-        if self._organization is None:
-            raise LookupError("сначала настройте организацию")
-        return self._organization
+        return self._repository.get()
 
     def set_position(
         self,
@@ -68,21 +82,18 @@ class OrganizationService:
         percent = self.validate_seniority_percent(seniority_percent)
 
         position = Position(name, rate, percent)
-        self._positions[name.casefold()] = position
+        self._positions.save(position)
         return position
 
     def get_position(self, name: str) -> Position:
         """Находит должность без учёта регистра букв."""
 
-        try:
-            return self._positions[name.strip().casefold()]
-        except KeyError as error:
-            raise LookupError(f"должность «{name}» не найдена") from error
+        return self._positions.get(name)
 
     def list_positions(self) -> list[Position]:
         """Возвращает все доступные должности."""
 
-        return list(self._positions.values())
+        return self._positions.list_all()
 
     def rate_for(self, name: str, experience_years: int) -> Decimal:
         """Рассчитывает ставку по должности и полным годам стажа."""

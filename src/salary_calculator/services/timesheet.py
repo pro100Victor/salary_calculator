@@ -65,6 +65,7 @@ class TimesheetService:
         if timesheet.entries.get(employee_id) != entry:
             timesheet.revision += 1
         timesheet.entries[employee_id] = entry
+        self._repository.save(timesheet)
         return entry
 
     def close(self, period: Period) -> None:
@@ -74,3 +75,4 @@ class TimesheetService:
         if timesheet.closed:
             raise ValueError("расчётный период уже закрыт")
         timesheet.closed = True
+        self._repository.save(timesheet)

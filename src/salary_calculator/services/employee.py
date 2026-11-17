@@ -14,7 +14,7 @@ class EmployeeService:
     def __init__(
         self, repository: EmployeeRepository, organization: OrganizationService
     ) -> None:
-        """Получает InMemory-хранилище и тарифы организации."""
+        """Получает абстрактное хранилище и тарифы организации."""
 
         self._repository = repository
         self._organization = organization
@@ -27,16 +27,14 @@ class EmployeeService:
         hire_date: date,
         experience_years: int,
     ) -> Employee:
-        """Проверяет данные, назначает ID и создаёт кадровую карточку."""
+        """Проверяет карточку и получает назначенный хранилищем ID."""
 
         name, inn = full_name.strip(), inn.strip()
         self._validate(name, inn, hire_date)
         self._check_inn_unique(inn)
         rate = self._organization.rate_for(position, experience_years)
-        employees = self._repository.list_all()
-        next_id = max((item.employee_id for item in employees), default=0) + 1
         employee = Employee(
-            next_id,
+            0,
             name,
             inn,
             self._organization.get_position(position).name,
@@ -44,8 +42,7 @@ class EmployeeService:
             experience_years,
             rate,
         )
-        self._repository.save(employee)
-        return employee
+        return self._repository.add(employee)
 
     def update_employee(
         self,
