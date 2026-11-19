@@ -6,7 +6,14 @@ from threading import RLock
 
 from salary_calculator.application.provider import ServiceProvider
 from salary_calculator.application.services import ApplicationServices
+from salary_calculator.repositories.calendar_norm import (
+    InMemoryCalendarNormRepository,
+)
 from salary_calculator.repositories.employee import InMemoryEmployeeRepository
+from salary_calculator.repositories.organization import (
+    InMemoryOrganizationRepository,
+)
+from salary_calculator.repositories.position import InMemoryPositionRepository
 from salary_calculator.repositories.statement import InMemoryStatementRepository
 from salary_calculator.repositories.timesheet import InMemoryTimesheetRepository
 from salary_calculator.services.calendar import CalendarService
@@ -22,9 +29,11 @@ class InMemoryServiceProvider(ServiceProvider):
     def __init__(self) -> None:
         """Собирает существующие сервисы с общей организацией и календарём."""
 
-        organization = OrganizationService()
+        organization = OrganizationService(
+            InMemoryOrganizationRepository(), InMemoryPositionRepository()
+        )
         employees = EmployeeService(InMemoryEmployeeRepository(), organization)
-        calendar = CalendarService()
+        calendar = CalendarService(InMemoryCalendarNormRepository())
         timesheets = TimesheetService(
             InMemoryTimesheetRepository(), employees, calendar
         )
