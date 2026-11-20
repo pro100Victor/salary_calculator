@@ -7,8 +7,8 @@ from decimal import Decimal
 
 import pytest
 
-from salary_calculator.application.sql_provider import SQLServiceProvider
-from salary_calculator.models import Period
+from payroll.application.sql_provider import SQLServiceProvider
+from payroll.models import Period
 
 DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -26,7 +26,7 @@ def provider() -> Iterator[SQLServiceProvider]:
 
     storage = SQLServiceProvider(DATABASE_URL)
     with storage.engine.begin() as connection:
-        from salary_calculator.db.base import Base
+        from payroll.db.base import Base
 
         for table in reversed(Base.metadata.sorted_tables):
             connection.execute(table.delete())

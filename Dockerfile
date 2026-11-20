@@ -8,7 +8,7 @@ COPY migrations ./migrations
 COPY src ./src
 COPY frontend ./frontend
 EXPOSE 8000
-CMD ["python", "-m", "uvicorn", "salary_calculator.web.app:create_web_application", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "payroll.web.app:create_web_application", "--factory", "--host", "0.0.0.0", "--port", "8000"]
 
 FROM runtime AS tests
 COPY tests ./tests

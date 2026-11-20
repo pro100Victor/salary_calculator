@@ -3,10 +3,9 @@
 import unittest
 from decimal import Decimal
 
-from salary_calculator.application.memory_provider import InMemoryServiceProvider
-
 from main import create_application
-from salary_calculator.cli.input_helpers import InputReader
+from payroll.application.memory_provider import InMemoryServiceProvider
+from payroll.cli.input_helpers import InputReader
 
 
 class CLITest(unittest.TestCase):

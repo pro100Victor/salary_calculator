@@ -2,7 +2,7 @@
 
 import uvicorn
 
-from salary_calculator.web.app import create_web_application
+from payroll.web.app import create_web_application
 
 
 def main() -> None:

@@ -4,10 +4,10 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from salary_calculator.db.base import Base
 from sqlalchemy import engine_from_config, pool
 
-import salary_calculator.db.models  # noqa: F401  регистрирует все таблицы проекта
+import payroll.db.models  # noqa: F401  регистрирует все таблицы проекта
+from payroll.db.base import Base
 
 config = context.config
 

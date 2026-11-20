@@ -13,16 +13,16 @@ from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from salary_calculator.application.sql_provider import SQLServiceProvider
-from salary_calculator.db.models import (
+from payroll.application.sql_provider import SQLServiceProvider
+from payroll.db.models import (
     Base,
     EmployeeRow,
     StatementResultRow,
     TimesheetEntryRow,
     TimesheetRow,
 )
-from salary_calculator.models import Employee, Period
-from salary_calculator.web.app import create_web_application
+from payroll.models import Employee, Period
+from payroll.web.app import create_web_application
 
 URL = os.environ.get("TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="нужна отдельная TEST_DATABASE_URL")
@@ -324,7 +324,7 @@ def test_sql_cli_reads_saved_employee(storage: SQLServiceProvider) -> None:
     """CLI использует ту же базу, что сервисы и веб."""
 
     from main import create_application
-    from salary_calculator.cli.input_helpers import InputReader
+    from payroll.cli.input_helpers import InputReader
 
     employee = prepare(storage)
     answers = iter(["admin", "admin", "6", "0"])

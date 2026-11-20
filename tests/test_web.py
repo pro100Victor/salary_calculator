@@ -5,11 +5,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from fastapi.testclient import TestClient
-from salary_calculator.application.errors import StorageError
-from salary_calculator.application.memory_provider import InMemoryServiceProvider
-from salary_calculator.application.services import ApplicationServices
 
-from salary_calculator.web.app import create_web_application
+from payroll.application.errors import StorageError
+from payroll.application.memory_provider import InMemoryServiceProvider
+from payroll.application.services import ApplicationServices
+from payroll.web.app import create_web_application
 
 
 class WebTest(unittest.TestCase):
