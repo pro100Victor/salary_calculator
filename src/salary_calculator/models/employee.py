@@ -30,6 +30,8 @@ class Employee:
         """Проверяет ФИО сотрудника."""
         if not value.strip():
             raise ValueError("ФИО не должно быть пустым")
+        if len(value.strip()) > 255:
+            raise ValueError("ФИО: максимум 255 символов")
 
     @staticmethod
     def validate_dates(hire_date: date, dismissal_date: date | None = None) -> None:

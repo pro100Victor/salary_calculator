@@ -1,7 +1,7 @@
 [project]
 name = "salary-calculator"
 version = "0.1.0"
-description = "Консольный InMemory-прототип расчёта заработной платы"
+description = "Расчёт зарплаты: CLI, веб-интерфейс, PostgreSQL и Alembic"
 requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.20.0",

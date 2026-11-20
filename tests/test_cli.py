@@ -3,6 +3,8 @@
 import unittest
 from decimal import Decimal
 
+from salary_calculator.application.memory_provider import InMemoryServiceProvider
+
 from main import create_application
 from salary_calculator.cli.input_helpers import InputReader
 
@@ -71,7 +73,9 @@ class CLITest(unittest.TestCase):
             input_function=lambda _: next(answers),
             output_function=messages.append,
         )
-        application = create_application(reader=reader, output=messages.append)
+        application = create_application(
+            reader=reader, output=messages.append, provider=InMemoryServiceProvider()
+        )
 
         application.run()
 
@@ -92,7 +96,9 @@ class CLITest(unittest.TestCase):
             input_function=lambda _: next(answers),
             output_function=messages.append,
         )
-        application = create_application(reader=reader, output=messages.append)
+        application = create_application(
+            reader=reader, output=messages.append, provider=InMemoryServiceProvider()
+        )
         application.run()
         self.assertEqual("\n".join(messages).count("неверный логин"), 3)
         self.assertNotIn("вход выполнен", messages)

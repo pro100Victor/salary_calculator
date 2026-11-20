@@ -32,14 +32,14 @@ class InMemoryPositionRepository(PositionRepository):
     def save(self, position: Position) -> Position:
         """Добавляет или обновляет должность."""
 
-        self._items[position.name] = position
+        self._items[position.name.casefold()] = position
         return position
 
     def get(self, name: str) -> Position:
         """Находит должность по имени."""
 
         try:
-            return self._items[name]
+            return self._items[name.strip().casefold()]
         except KeyError as error:
             raise LookupError(f"должность {name} не найдена") from error
 

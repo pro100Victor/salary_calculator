@@ -4,9 +4,9 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
+from salary_calculator.db.base import Base
 from sqlalchemy import engine_from_config, pool
 
-from salary_calculator.db.base import Base
 import salary_calculator.db.models  # noqa: F401  регистрирует все таблицы проекта
 
 config = context.config
@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 target_metadata = Base.metadata
 

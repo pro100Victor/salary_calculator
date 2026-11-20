@@ -1,6 +1,58 @@
-fastapi>=0.142.2
-pydantic>=2.13.5
-uvicorn>=0.54.0
-sqlalchemy>=2.1.3
-alembic>=1.20.0
-psycopg[binary]>=3.2
+alembic==1.20.0
+    # via salary-calculator
+annotated-doc==0.0.5
+    # via fastapi
+annotated-types==0.8.0
+    # via pydantic
+anyio==4.15.1
+    # via starlette
+click==8.5.1
+    # via uvicorn
+fastapi==0.142.2
+    # via salary-calculator
+h11==0.16.0
+    # via uvicorn
+idna==3.20
+    # via anyio
+mako==1.4.3
+    # via alembic
+markupsafe==3.0.4
+    # via mako
+opentelemetry-api==1.45.0
+    # via fastapi
+psycopg==3.3.9
+    # via salary-calculator
+psycopg-binary==3.3.9 ; implementation_name != 'pypy'
+    # via psycopg
+pydantic==2.13.5
+    # via
+    #   fastapi
+    #   salary-calculator
+pydantic-core==2.46.5
+    # via pydantic
+sqlalchemy==2.1.3
+    # via
+    #   alembic
+    #   salary-calculator
+starlette==1.7.0
+    # via fastapi
+typing-extensions==4.16.0
+    # via
+    #   alembic
+    #   anyio
+    #   fastapi
+    #   opentelemetry-api
+    #   psycopg
+    #   pydantic
+    #   pydantic-core
+    #   sqlalchemy
+    #   starlette
+    #   typing-inspection
+typing-inspection==0.4.4
+    # via
+    #   fastapi
+    #   pydantic
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via psycopg
+uvicorn==0.54.0
+    # via salary-calculator

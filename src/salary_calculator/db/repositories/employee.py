@@ -1,7 +1,6 @@
 """SQL-репозиторий кадровых карточек."""
 
-from sqlalchemy import delete, func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from salary_calculator.db import mappers
@@ -30,10 +29,7 @@ class SqlEmployeeRepository(EmployeeRepository):
         else:
             row = EmployeeRow(**mappers.employee_fields(employee))
             self._session.add(row)
-        try:
-            self._session.flush()
-        except IntegrityError as error:
-            raise ValueError("сотрудник с таким ИНН уже существует") from error
+        self._session.flush()
         return mappers.employee_to_domain(row)
 
     def get(self, employee_id: int) -> Employee:
@@ -47,9 +43,11 @@ class SqlEmployeeRepository(EmployeeRepository):
     def list_all(self) -> list[Employee]:
         """Возвращает все карточки по возрастанию идентификатора."""
 
-        rows = self._session.execute(
-            select(EmployeeRow).order_by(EmployeeRow.employee_id)
-        ).scalars().all()
+        rows = (
+            self._session.execute(select(EmployeeRow).order_by(EmployeeRow.employee_id))
+            .scalars()
+            .all()
+        )
         return [mappers.employee_to_domain(row) for row in rows]
 
     def find_by_inn(self, inn: str) -> Employee | None:
@@ -65,6 +63,8 @@ class SqlEmployeeRepository(EmployeeRepository):
 
         return int(
             self._session.execute(
-                select(func.count()).select_from(EmployeeRow).where(EmployeeRow.position == position)
+                select(func.count())
+                .select_from(EmployeeRow)
+                .where(EmployeeRow.position == position)
             ).scalar_one()
         )

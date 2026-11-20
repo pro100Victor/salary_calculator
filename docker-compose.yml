@@ -16,7 +16,9 @@ services:
       retries: 10
 
   migrations:
-    build: .
+    build:
+      context: .
+      target: runtime
     command: python -m alembic upgrade head
     environment:
       DATABASE_URL: postgresql+psycopg://salary:salary@db:5432/salary
@@ -25,8 +27,10 @@ services:
         condition: service_healthy
 
   web:
-    build: .
-    command: python src/web_main.py
+    build:
+      context: .
+      target: runtime
+    command: python -m uvicorn salary_calculator.web.app:create_web_application --factory --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     environment:
@@ -37,6 +41,33 @@ services:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+
+  db-test:
+    image: postgres:17-alpine
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: salary
+      POSTGRES_PASSWORD: salary
+      POSTGRES_DB: salary_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salary -d salary_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  tests:
+    profiles: ["test"]
+    build:
+      context: .
+      target: tests
+    command: sh -c "python -m alembic upgrade head && python -m pytest -q"
+    environment:
+      PYTHONPATH: /app/src
+      DATABASE_URL: postgresql+psycopg://salary:salary@db-test:5432/salary_test
+      TEST_DATABASE_URL: postgresql+psycopg://salary:salary@db-test:5432/salary_test
+    depends_on:
+      db-test:
+        condition: service_healthy
 
 volumes:
   pgdata:

@@ -5,10 +5,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from fastapi.testclient import TestClient
-
 from salary_calculator.application.errors import StorageError
 from salary_calculator.application.memory_provider import InMemoryServiceProvider
 from salary_calculator.application.services import ApplicationServices
+
 from salary_calculator.web.app import create_web_application
 
 
@@ -18,8 +18,9 @@ class WebTest(unittest.TestCase):
     def setUp(self) -> None:
         """Открывает чистое приложение и учебный сеанс."""
 
-        self.app = create_web_application()
+        self.app = create_web_application(provider=InMemoryServiceProvider())
         self.client = TestClient(self.app)
+        self.addCleanup(self.client.close)
         self.client.post("/api/login", json={"username": "admin", "password": "admin"})
 
     def prepare_employee(self) -> None:

@@ -32,6 +32,8 @@ class Position:
         name = value.strip()
         if not name:
             raise ValueError("название должности не может быть пустым")
+        if len(name) > 120:
+            raise ValueError("название должности: максимум 120 символов")
         return name
 
     @staticmethod
@@ -50,6 +52,10 @@ class Position:
         percent = as_decimal(value)
         if not 0 <= percent <= 100:
             raise ValueError("надбавка за год стажа должна быть от 0 до 100%")
+        if percent != percent.quantize(KOPECK):
+            raise ValueError(
+                "надбавка должна содержать не более двух знаков после запятой"
+            )
         return percent
 
     def __post_init__(self) -> None:

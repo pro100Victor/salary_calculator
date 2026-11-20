@@ -16,6 +16,8 @@ class Organization:
         name = value.strip()
         if not name:
             raise ValueError("название организации не должно быть пустым")
+        if len(name) > 255:
+            raise ValueError("название организации: максимум 255 символов")
         return name
 
     @staticmethod
@@ -42,6 +44,8 @@ class Organization:
         address = value.strip()
         if not address:
             raise ValueError("адрес организации не должен быть пустым")
+        if len(address) > 255:
+            raise ValueError("адрес организации: максимум 255 символов")
         return address
 
     def __post_init__(self) -> None:

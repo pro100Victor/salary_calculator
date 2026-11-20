@@ -4,6 +4,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from salary_calculator.db import mappers
+from salary_calculator.db.locking import lock_period
 from salary_calculator.db.models import StatementResultRow, StatementRow
 from salary_calculator.models import PayrollStatement, Period
 from salary_calculator.repositories.statement import StatementRepository
@@ -20,6 +21,7 @@ class SqlStatementRepository(StatementRepository):
     def save(self, statement: PayrollStatement) -> PayrollStatement:
         """Создаёт или перезаписывает ведомость вместе со всеми строками."""
 
+        lock_period(self._session, statement.period)
         header = self._session.execute(
             select(StatementRow)
             .where(
@@ -59,26 +61,35 @@ class SqlStatementRepository(StatementRepository):
     def get(self, period: Period) -> PayrollStatement:
         """Возвращает ведомость за период или поднимает знакомую ошибку."""
 
+        lock_period(self._session, period)
         header = self._session.execute(
-            select(StatementRow)
-            .where(StatementRow.year == period.year, StatementRow.month == period.month)
+            select(StatementRow).where(
+                StatementRow.year == period.year, StatementRow.month == period.month
+            )
         ).scalar_one_or_none()
         if header is None:
             raise LookupError(f"ведомость за {period} не найдена")
-        rows = self._session.execute(
-            select(StatementResultRow)
-            .where(StatementResultRow.statement_id == header.statement_id)
-            .order_by(StatementResultRow.employee_id)
-        ).scalars().all()
+        rows = (
+            self._session.execute(
+                select(StatementResultRow)
+                .where(StatementResultRow.statement_id == header.statement_id)
+                .order_by(StatementResultRow.employee_id)
+            )
+            .scalars()
+            .all()
+        )
         return mappers.statement_to_domain(header, rows)
 
     def contains(self, period: Period) -> bool:
         """Проверяет существование ведомости за период."""
 
+        lock_period(self._session, period)
         return bool(
             self._session.execute(
                 select(func.count())
                 .select_from(StatementRow)
-                .where(StatementRow.year == period.year, StatementRow.month == period.month)
+                .where(
+                    StatementRow.year == period.year, StatementRow.month == period.month
+                )
             ).scalar_one()
         )

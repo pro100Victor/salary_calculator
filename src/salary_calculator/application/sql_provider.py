@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from salary_calculator.application.errors import StorageError
@@ -59,6 +59,16 @@ class SQLServiceProvider(ServiceProvider):
                 organization, employees, calendar, timesheets, payroll
             )
             session.commit()
+        except IntegrityError as error:
+            session.rollback()
+            constraint = getattr(
+                getattr(error.orig, "diag", None), "constraint_name", ""
+            )
+            if constraint == "uq_employees_inn":
+                raise ValueError("сотрудник с таким ИНН уже существует") from None
+            raise ValueError(
+                "данные нарушают ограничения базы; операция отменена"
+            ) from None
         except SQLAlchemyError:
             session.rollback()
             raise StorageError(

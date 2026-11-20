@@ -2,16 +2,16 @@
 
 # Текущий этап — лабораторная работа 4
 
-Эта секция уточняет историческое описание ЛР3 ниже. Пользователь разрешил добавление FastAPI и простого веб-интерфейса, а также подготовку подключения SQLAlchemy/Alembic. Текущая рабочая сборка пока остаётся InMemory. Не называйте PostgreSQL и миграции готовыми, пока они не реализованы и не проверены.
-
-- CLI: `src/main.py`. Веб: `src/web_main.py`. Браузерные файлы: `frontend/`, HTTP-адаптер: `src/salary_calculator/web/`.
-- Предметные модели уже разложены в `models/`, репозитории — в `repositories/`, сервисы — в `services/`. Расчётные стратегии: `services/calculator/strategies/`.
-- Общая сборка: `application/factory.py`. ServiceProvider — ABC. Одна операция должна получать свой набор сервисов; SQL-реализация управляет одной Session и транзакцией.
-- Правила полей находятся в domain-моделях; интерфейсы вызывают публичные валидаторы. Формулы и точные деньги не переносить в JavaScript. Даты Employee проверяются единым validate_dates().
-- OrganizationService пока содержит и реквизиты, и должности; не предполагайте наличие PositionService без проверки актуальных файлов.
-- Сохраняйте API и поведение обоих интерфейсов. Не используйте Base.metadata.create_all(); схема только через Alembic. Не добавляйте незаметный fallback с SQL на InMemory.
-- Полные инструкции: docs/LAB4_ENGINEER2.md, docs/LAB4_ENGINEER3_HANDOFF.md, docs/WEB_API.md.
-- Дальнейшая интеграция БД: инженер 1 — ER/ORM/репозитории/мапперы/сервисы; инженер 3 — конфигурация/Session/Alembic/Compose/SQLServiceProvider/интеграционные тесты; инженер 2 — CLI/веб/HTTP-адаптер/пользовательские ошибки.
+- Приложение по умолчанию работает с PostgreSQL; InMemory — только явный STORAGE_BACKEND=memory и изолированные тесты.
+- Код пакета находится в src/salary_calculator/. main.py и web_main.py — в src, frontend — в корне.
+- Предметные модели: models/. ORM-классы: db/orm/, по одному на файл; db/models.py сохраняет публичные импорты. Классы-мапперы: db/mapping/; db/mappers.py сохраняет API репозиториев.
+- SQL-реализации: db/repositories/, ABC и InMemory: repositories/. Сервисы и методы CLI/HTTP сохранять совместимыми.
+- Одна операция SQLServiceProvider — одна Session и транзакция. Commit/rollback только у провайдера, не у репозитория. Ошибки ограничений преобразуются после rollback.
+- Схема создаётся только Alembic, Base.metadata.create_all() запрещён. Не переписывать применённые ревизии; следующая ревизия после b3d7f9a1c5e2 — 5cae56cbd4ce.
+- PK/FK, Mapped/mapped_column, relationship/back_populates и осознанные каскады обязательны. M:N сотрудников и табелей: строки табеля плюс viewonly-навигация.
+- Правила полей находятся в моделях, уникальность — в сервисе и БД. Decimal, учебный НДФЛ 13%, ISO-даты, денежные строки API; формулы не переносить в JS.
+- SQL-тесты очищают только явно заданную TEST_DATABASE_URL на отдельной БД. DATABASE_URL приложения нельзя использовать как неявное разрешение очистки.
+- Актуальные инструкции: docs/ARCHITECTURE.md, docs/ER.md, docs/INTEGRATION_CHECKLIST.md, docs/LAB4_AUDIT.md. Исторические правила ЛР3 ниже не отменяют этот этап.
 
 ## Цель проекта
 

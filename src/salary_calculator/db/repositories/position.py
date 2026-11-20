@@ -1,6 +1,6 @@
 """SQL-репозиторий должностей с обновлением тарифа по имени."""
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from salary_calculator.db import mappers
@@ -46,7 +46,9 @@ class SqlPositionRepository(PositionRepository):
     def list_all(self) -> list[Position]:
         """Возвращает все должности по алфавиту."""
 
-        rows = self._session.execute(
-            select(PositionRow).order_by(PositionRow.name)
-        ).scalars().all()
+        rows = (
+            self._session.execute(select(PositionRow).order_by(PositionRow.name))
+            .scalars()
+            .all()
+        )
         return [mappers.position_to_domain(row) for row in rows]

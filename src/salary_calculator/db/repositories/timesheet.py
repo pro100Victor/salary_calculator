@@ -4,6 +4,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from salary_calculator.db import mappers
+from salary_calculator.db.locking import lock_period
 from salary_calculator.db.models import TimesheetEntryRow, TimesheetRow
 from salary_calculator.models import Period, Timesheet
 from salary_calculator.repositories.timesheet import TimesheetRepository
@@ -20,6 +21,7 @@ class SqlTimesheetRepository(TimesheetRepository):
     def save(self, timesheet: Timesheet) -> Timesheet:
         """Создаёт табель или перезаписывает строки по текущему состоянию."""
 
+        lock_period(self._session, timesheet.period)
         header = self._session.execute(
             select(TimesheetRow)
             .where(
@@ -64,6 +66,7 @@ class SqlTimesheetRepository(TimesheetRepository):
     def get(self, period: Period) -> Timesheet:
         """Возвращает табель, блокируя шапку от параллельной правки."""
 
+        lock_period(self._session, period)
         header = self._session.execute(
             select(TimesheetRow)
             .where(TimesheetRow.year == period.year, TimesheetRow.month == period.month)
@@ -71,20 +74,27 @@ class SqlTimesheetRepository(TimesheetRepository):
         ).scalar_one_or_none()
         if header is None:
             raise LookupError(f"табель за {period} не найден")
-        rows = self._session.execute(
-            select(TimesheetEntryRow)
-            .where(TimesheetEntryRow.timesheet_id == header.timesheet_id)
-            .order_by(TimesheetEntryRow.employee_id)
-        ).scalars().all()
+        rows = (
+            self._session.execute(
+                select(TimesheetEntryRow)
+                .where(TimesheetEntryRow.timesheet_id == header.timesheet_id)
+                .order_by(TimesheetEntryRow.employee_id)
+            )
+            .scalars()
+            .all()
+        )
         return mappers.timesheet_to_domain(header, rows)
 
     def contains(self, period: Period) -> bool:
         """Проверяет существование табеля за период."""
 
+        lock_period(self._session, period)
         return bool(
             self._session.execute(
                 select(func.count())
                 .select_from(TimesheetRow)
-                .where(TimesheetRow.year == period.year, TimesheetRow.month == period.month)
+                .where(
+                    TimesheetRow.year == period.year, TimesheetRow.month == period.month
+                )
             ).scalar_one()
         )

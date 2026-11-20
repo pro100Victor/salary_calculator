@@ -14,7 +14,7 @@ class EmployeeService:
     def __init__(
         self, repository: EmployeeRepository, organization: OrganizationService
     ) -> None:
-        """Получает InMemory-хранилище и тарифы организации."""
+        """Получает хранилище сотрудников и тарифы организации."""
 
         self._repository = repository
         self._organization = organization
@@ -27,16 +27,14 @@ class EmployeeService:
         hire_date: date,
         experience_years: int,
     ) -> Employee:
-        """Проверяет данные, назначает ID и создаёт кадровую карточку."""
+        """Проверяет данные и создаёт карточку с ID, назначенным хранилищем."""
 
         name, inn = full_name.strip(), inn.strip()
         self._validate(name, inn, hire_date)
         self._check_inn_unique(inn)
         rate = self._organization.rate_for(position, experience_years)
-        employees = self._repository.list_all()
-        next_id = max((item.employee_id for item in employees), default=0) + 1
         employee = Employee(
-            next_id,
+            0,
             name,
             inn,
             self._organization.get_position(position).name,
@@ -44,8 +42,7 @@ class EmployeeService:
             experience_years,
             rate,
         )
-        self._repository.save(employee)
-        return employee
+        return self._repository.save(employee)
 
     def update_employee(
         self,
@@ -73,8 +70,7 @@ class EmployeeService:
             experience_years=experience_years,
             rate_per_shift=rate,
         )
-        self._repository.save(updated)
-        return updated
+        return self._repository.save(updated)
 
     def dismiss_employee(self, employee_id: int, dismissal_date: date) -> Employee:
         """Устанавливает дату увольнения без удаления истории сотрудника."""
@@ -82,8 +78,7 @@ class EmployeeService:
         employee = self._repository.get(employee_id)
         self.validate_dismissal_date(employee_id, dismissal_date)
         updated = replace(employee, dismissal_date=dismissal_date)
-        self._repository.save(updated)
-        return updated
+        return self._repository.save(updated)
 
     def get_employee_by_id(self, employee_id: int) -> Employee:
         """Возвращает сотрудника по идентификатору."""
