@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from payroll.db import mappers
+from payroll.db.mapping.position import PositionMapper
 from payroll.db.models import PositionRow
 from payroll.models import Position
 from payroll.repositories.position import PositionRepository
@@ -41,7 +41,7 @@ class SqlPositionRepository(PositionRepository):
         row = self._session.get(PositionRow, name)
         if row is None:
             raise LookupError(f"должность {name} не найдена")
-        return mappers.position_to_domain(row)
+        return PositionMapper.to_domain(row)
 
     def list_all(self) -> list[Position]:
         """Возвращает все должности по алфавиту."""
@@ -51,4 +51,4 @@ class SqlPositionRepository(PositionRepository):
             .scalars()
             .all()
         )
-        return [mappers.position_to_domain(row) for row in rows]
+        return [PositionMapper.to_domain(row) for row in rows]

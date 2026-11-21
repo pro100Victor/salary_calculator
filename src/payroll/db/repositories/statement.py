@@ -3,8 +3,9 @@
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from payroll.db import mappers
 from payroll.db.locking import lock_period
+from payroll.db.mapping.payroll_result import PayrollResultMapper
+from payroll.db.mapping.statement import StatementMapper
 from payroll.db.models import StatementResultRow, StatementRow
 from payroll.models import PayrollStatement, Period
 from payroll.repositories.statement import StatementRepository
@@ -52,7 +53,7 @@ class SqlStatementRepository(StatementRepository):
                 StatementResultRow(
                     statement_id=header.statement_id,
                     employee_id=result.employee.employee_id,
-                    **mappers.result_fields(result),
+                    **PayrollResultMapper.fields(result),
                 )
             )
         self._session.flush()
@@ -78,7 +79,7 @@ class SqlStatementRepository(StatementRepository):
             .scalars()
             .all()
         )
-        return mappers.statement_to_domain(header, rows)
+        return StatementMapper.to_domain(header, rows)
 
     def contains(self, period: Period) -> bool:
         """Проверяет существование ведомости за период."""

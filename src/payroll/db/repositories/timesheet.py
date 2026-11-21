@@ -3,8 +3,8 @@
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from payroll.db import mappers
 from payroll.db.locking import lock_period
+from payroll.db.mapping.timesheet import TimesheetMapper
 from payroll.db.models import TimesheetEntryRow, TimesheetRow
 from payroll.models import Period, Timesheet
 from payroll.repositories.timesheet import TimesheetRepository
@@ -83,7 +83,7 @@ class SqlTimesheetRepository(TimesheetRepository):
             .scalars()
             .all()
         )
-        return mappers.timesheet_to_domain(header, rows)
+        return TimesheetMapper.to_domain(header, rows)
 
     def contains(self, period: Period) -> bool:
         """Проверяет существование табеля за период."""
