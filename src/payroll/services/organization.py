@@ -88,13 +88,9 @@ class OrganizationService:
         return self._positions.save(Position(existing.name, rate, percent))
 
     def get_position(self, name: str) -> Position:
-        """Находит должность без учёта регистра букв."""
+        """Возвращает должность из подключённого хранилища."""
 
-        key = name.strip().casefold()
-        for position in self._positions.list_all():
-            if position.name.casefold() == key:
-                return position
-        raise LookupError(f"должность «{name}» не найдена")
+        return self._positions.get(name)
 
     def list_positions(self) -> list[Position]:
         """Возвращает все доступные должности."""

@@ -1,6 +1,6 @@
 """SQL-репозиторий кадровых карточек."""
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from payroll.db.mapping.employee import EmployeeMapper
@@ -57,14 +57,3 @@ class SqlEmployeeRepository(EmployeeRepository):
             select(EmployeeRow).where(EmployeeRow.inn == inn)
         ).scalar_one_or_none()
         return None if row is None else EmployeeMapper.to_domain(row)
-
-    def count_by_position(self, position: str) -> int:
-        """Считает карточки, занимающие должность (для запрета удаления)."""
-
-        return int(
-            self._session.execute(
-                select(func.count())
-                .select_from(EmployeeRow)
-                .where(EmployeeRow.position == position)
-            ).scalar_one()
-        )

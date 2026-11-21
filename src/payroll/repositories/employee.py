@@ -26,11 +26,6 @@ class EmployeeRepository(ABC):
 
         return next((item for item in self.list_all() if item.inn == inn), None)
 
-    def count_by_position(self, position: str) -> int:
-        """Возвращает количество сотрудников с указанной должностью."""
-
-        return sum(item.position == position for item in self.list_all())
-
 
 class InMemoryEmployeeRepository(EmployeeRepository):
     """Хранит неизменяемые карточки в словаре по идентификатору."""

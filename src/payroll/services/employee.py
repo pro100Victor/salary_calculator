@@ -57,10 +57,9 @@ class EmployeeService:
 
         old = self._repository.get(employee_id)
         name, inn = full_name.strip(), inn.strip()
-        self._validate(name, inn, hire_date)
+        self._validate(name, inn, hire_date, old.dismissal_date)
         self._check_inn_unique(inn, except_id=employee_id)
         rate = self._organization.rate_for(position, experience_years)
-        self.validate_hire_date(hire_date, old.dismissal_date)
         updated = replace(
             old,
             full_name=name,
@@ -73,10 +72,10 @@ class EmployeeService:
         return self._repository.save(updated)
 
     def dismiss_employee(self, employee_id: int, dismissal_date: date) -> Employee:
-        """Устанавливает дату увольнения без удаления истории сотрудника."""
+        """Сохраняет увольнение без удаления кадровой истории."""
 
         employee = self._repository.get(employee_id)
-        self.validate_dismissal_date(employee_id, dismissal_date)
+        self._validate_dismissal(employee, dismissal_date)
         updated = replace(employee, dismissal_date=dismissal_date)
         return self._repository.save(updated)
 
@@ -95,14 +94,18 @@ class EmployeeService:
 
         return [item for item in self.get_all_employees() if item.employed_in(period)]
 
-    def _validate(self, name: str, inn: str, hire_date: date) -> None:
-        """Проверяет обязательные кадровые сведения."""
+    def _validate(
+        self,
+        name: str,
+        inn: str,
+        hire_date: date,
+        dismissal_date: date | None = None,
+    ) -> None:
+        """Проверяет обязательные поля и порядок дат сотрудника."""
 
         self.validate_full_name(name)
-
         Employee.validate_inn(inn)
-
-        self.validate_hire_date(hire_date)
+        self.validate_hire_date(hire_date, dismissal_date)
 
     def validate_inn(self, value: str, except_id: int | None = None) -> None:
         """Проверяет формат и уникальность ИНН без сохранения карточки."""
@@ -111,11 +114,11 @@ class EmployeeService:
         self._check_inn_unique(value, except_id=except_id)
 
     def _check_inn_unique(self, inn: str, except_id: int | None = None) -> None:
-        """Отклоняет дубликат ИНН среди кадровых карточек."""
+        """Отклоняет ИНН, принадлежащий другому сотруднику."""
 
-        for item in self.get_all_employees():
-            if item.inn == inn and item.employee_id != except_id:
-                raise ValueError("сотрудник с таким ИНН уже существует")
+        existing = self._repository.find_by_inn(inn)
+        if existing is not None and existing.employee_id != except_id:
+            raise ValueError("сотрудник с таким ИНН уже существует")
 
     @staticmethod
     def validate_full_name(value: str) -> None:
@@ -128,8 +131,15 @@ class EmployeeService:
         Employee.validate_dates(value, dismissal_date)
 
     def validate_dismissal_date(self, employee_id: int, dismissal_date: date) -> None:
-        """Проверяет возможность увольнения без изменения карточки."""
+        """Проверяет увольнение без изменения карточки."""
+
         employee = self.get_employee_by_id(employee_id)
+        self._validate_dismissal(employee, dismissal_date)
+
+    @staticmethod
+    def _validate_dismissal(employee: Employee, dismissal_date: date) -> None:
+        """Проверяет увольнение уже полученного сотрудника."""
+
         Employee.validate_dates(employee.hire_date, dismissal_date)
         if employee.dismissal_date is not None:
             raise ValueError("сотрудник уже уволен")

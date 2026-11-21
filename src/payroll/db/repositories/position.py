@@ -36,12 +36,13 @@ class SqlPositionRepository(PositionRepository):
         return position
 
     def get(self, name: str) -> Position:
-        """Находит должность по имени или сообщает о её отсутствии."""
+        """Находит должность без учёта регистра и крайних пробелов."""
 
-        row = self._session.get(PositionRow, name)
-        if row is None:
-            raise LookupError(f"должность {name} не найдена")
-        return PositionMapper.to_domain(row)
+        key = name.strip().casefold()
+        for position in self.list_all():
+            if position.name.casefold() == key:
+                return position
+        raise LookupError(f"должность «{name}» не найдена")
 
     def list_all(self) -> list[Position]:
         """Возвращает все должности по алфавиту."""
