@@ -1,7 +1,6 @@
 """Пользовательские сценарии CLI для всех функций учебного прототипа."""
 
 from collections.abc import Callable
-from contextlib import nullcontext
 from datetime import date
 from decimal import Decimal
 
@@ -17,11 +16,6 @@ from payroll.cli.presenters import (
 )
 from payroll.models import Period
 from payroll.services.auth import AuthService
-from payroll.services.calendar import CalendarService
-from payroll.services.employee import EmployeeService
-from payroll.services.organization import OrganizationService
-from payroll.services.payroll import PayrollService
-from payroll.services.timesheet import TimesheetService
 
 
 class SalaryCalculatorCLI:
@@ -30,32 +24,14 @@ class SalaryCalculatorCLI:
     def __init__(
         self,
         auth: AuthService,
-        organization: OrganizationService | None = None,
-        employees: EmployeeService | None = None,
-        calendar: CalendarService | None = None,
-        timesheets: TimesheetService | None = None,
-        payroll: PayrollService | None = None,
+        provider: ServiceProvider,
         reader: InputReader | None = None,
         output: Callable[[str], None] | None = None,
-        provider: ServiceProvider | None = None,
     ) -> None:
-        """Принимает подготовленные сервисы и функции ввода-вывода."""
+        """Принимает провайдер сервисов и функции ввода-вывода."""
 
         self._auth = auth
         self._provider = provider
-        self._legacy_services = None
-        if provider is None:
-            if (
-                organization is None
-                or employees is None
-                or calendar is None
-                or timesheets is None
-                or payroll is None
-            ):
-                raise ValueError("передайте провайдер или полный набор сервисов")
-            self._legacy_services = ApplicationServices(
-                organization, employees, calendar, timesheets, payroll
-            )
         self._output = output or print
         self._reader = reader or InputReader(output_function=self._output)
         self._running = True
@@ -90,12 +66,7 @@ class SalaryCalculatorCLI:
                 try:
                     choice = self._reader.read_int("выберите действие: ", 0, 13)
                     self._auth.require_login()
-                    operation = (
-                        self._provider.operation()
-                        if self._provider
-                        else nullcontext(self._legacy_services)
-                    )
-                    with operation as services:
+                    with self._provider.operation() as services:
                         self._bind_services(services)
                         actions[choice]()
                 except (
